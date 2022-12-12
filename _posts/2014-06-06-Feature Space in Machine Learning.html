@@ -1,0 +1,24 @@
+---
+layout: post
+title:  "Feature space in machine learning"
+date:   2014-06-06 10:42:22 -0500
+---
+<p>Feature space refers to the \(n\)-dimensions where your variables live (not including a target variable, if it is present). The term is used often in ML literature because a task in ML is <i>feature extraction</i>, hence we view all variables as features. For example, consider the data set with:</p>
+<b>Target</b>
+<ul>
+<li>\(Y \equiv\) Thickness of car tires after some testing period</li>
+</ul>
+<b>Variables</b>
+<ul>
+<li>\(X_1 \equiv\) distance travelled in test</li>
+<li>\(X_2 \equiv\) time duration of test</li>
+<li>\(X_3 \equiv\) amount of chemical \(C\) in tires</li>
+</ul>
+<p>The feature space is \(\mathbf{R}^3\), or more accurately, the positive quadrant in \(\mathbf{R}^3\) as all the \(X\) variables can only be positive quantities. Domain knowledge about tires might suggest that the *speed* the vehicle was moving at is important, hence we generate another variable, \(X_4\) (this is the feature extraction part):</p>
+<ul>
+<li>\(X_4 =\frac{X_1}{X_2} \equiv\) the speed of the vehicle during testing.</li>
+</ul>
+<p>This extends our old feature space into a new one, the positive part of \(\mathbf{R}^4\).</p>
+<h4>Mappings</h4>
+<p>Furthermore, a <i>mapping</i> in our example is a function, \(\phi\), from \(\mathbf{R}^3\) to \(\mathbf{R}^4\):</p>
+$$\phi(x_1,x_2,x_3) = (x_1, x_2, x_3, \frac{x_1}{x_2} )$$
