@@ -1,0 +1,157 @@
+---
+layout: post
+title:  "Interior designing with Machine Learning"
+date:   2015-11-22T14:58:34-05:00
+redirect_from:
+  - /blogs/napkin-folding/79028099-interior-designing-with-machine-learning
+---
+
+<p>(Originally on camdp.com)</p>
+<p>While designing my new apartment, I found a very cool use of machine learning. Yes, that's right, you can use machine learning in interior design. As crazy as it sounds, it is completely legitimate.</p>
+<h3>The Problem</h3>
+<p>I like to show off my collection of books. And with nice new bookshelves in my apartment, I wanted to display the book collection in an interesting way. I've seen organizing books by colour and gradient, a visual trick I find really appealing.</p>
+<p class="indent" style="padding-left: 30px;"><img alt="" src="https://cdn.shopify.com/s/files/1/0678/1739/files/aAjdrmw.jpg?14771869060070599988"/></p>
+<p class="indent">But creating a smooth gradient from colors is quite difficult, as colour changes strangely and the number of possible orderings rises quickly with increased number of books. One thing I can determine is the rgb colour scheme of each book. This gives me three dimensional data points associated with each book. What I would like to do is the following:</p>
+<ol>
+<li>Find a 1-dimensional representation of each book's color, so the collection can be <b>sorted</b>.</li>
+<li>Determine some ordering. Consider the following ordering. An ordering that sorts based on the amount of blue in a collection of books that are only green and red would be very poor (under an rgb scheme, remember, these books have little or no blue), as the human eye would have difficulty seeing the amount of blue vary over the ordering. Thus, I would like an ordering that maximizes the amount of variation in the collection.</li>
+</ol>
+<p>This is otherwise known as <b>PCA</b>. So, simply performing PCA on my 3-d data points and projecting onto the principle component gives me an ordering that satisfies maximizing variation.</p>
+<h3>Results</h3>
+<p>This is an actual problem I had, and I used the PCA technique on a subset of my collection of books. I took a picture of 21 books and color-picked them to find the rgb values. I threw this all into Python to perform the PCA.</p>
+<pre class="brush:python">import numpy as np
+
+colours = np.array( [
+            [27,17,20],[121, 42, 65], [79, 15, 19], [79,23, 17],
+            [70, 15,11], [84, 29, 27], [123, 44, 32], [138, 44, 34],
+            [111, 28, 21], [86,21,16], [203, 65, 46], [193, 91, 63],
+            [107, 24, 17], [109,44, 30],  [82, 24, 17], [127, 63, 33],
+            [176, 97, 36], [155, 76, 32], [144, 91, 36], [185, 125, 50],
+            [176, 140, 47], [174, 139, 87]
+            ])
+            
+ncolors = (colours - colours.mean(axis=0 ) )/colours.std(axis=0) #always a smart idea to standardize pre-PCA
+S = np.corrcoef( ncolours.T )
+w,eignvectors = np.linalg.eig(S)
+
+reduced_data = np.dot( ncolors, eignvectors[:,np.argmax(w)] )
+collection = np.argsort( reduced_data )
+
+
+</pre>
+<p class="indent" style="margin-top: 20px;">In the figure below, the top row was my initial attempt to order the colors. As you can see, it is <i>ok</i>. The bottom row is the PCA's result. You can judge who did a better job</p>
+<table cellpadding="0" cellspacing="0" style="margin: 30px auto;">
+<tbody>
+<tr>
+<td style="padding: 1px 5px; font-size: 12;">My ordering</td>
+<td style="background-color: #1b1114; padding: 9px;"> </td>
+<td style="background-color: #792a41; padding: 9px;"> </td>
+<td style="background-color: #4f0f13; padding: 9px;"> </td>
+<td style="background-color: #4f1711; padding: 9px;"> </td>
+<td style="background-color: #460f0b; padding: 9px;"> </td>
+<td style="background-color: #541d1b; padding: 9px;"> </td>
+<td style="background-color: #7b2c20; padding: 9px;"> </td>
+<td style="background-color: #8a2c22; padding: 9px;"> </td>
+<td style="background-color: #6f1c15; padding: 9px;"> </td>
+<td style="background-color: #561510; padding: 9px;"> </td>
+<td style="background-color: #cb412e; padding: 9px;"> </td>
+<td style="background-color: #c15b3f; padding: 9px;"> </td>
+<td style="background-color: #6b1811; padding: 9px;"> </td>
+<td style="background-color: #6d2c1e; padding: 9px;"> </td>
+<td style="background-color: #521811; padding: 9px;"> </td>
+<td style="background-color: #7f3f21; padding: 9px;"> </td>
+<td style="background-color: #b06124; padding: 9px;"> </td>
+<td style="background-color: #9b4c20; padding: 9px;"> </td>
+<td style="background-color: #905b24; padding: 9px;"> </td>
+<td style="background-color: #b97d32; padding: 9px;"> </td>
+<td style="background-color: #b08c2f; padding: 9px;"> </td>
+<td style="background-color: #ae8b57; padding: 9px;"> </td>
+</tr>
+<tr>
+<td style="padding: 1px 5px; font-size: 12;">PCA's results</td>
+<td style="background-color: #1b1114; padding: 9px;"> </td>
+<td style="background-color: #460f0b; padding: 9px;"> </td>
+<td style="background-color: #4f0f13; padding: 9px;"> </td>
+<td style="background-color: #4f1711; padding: 9px;"> </td>
+<td style="background-color: #561510; padding: 9px;"> </td>
+<td style="background-color: #521811; padding: 9px;"> </td>
+<td style="background-color: #6b1811; padding: 9px;"> </td>
+<td style="background-color: #541d1b; padding: 9px;"> </td>
+<td style="background-color: #6f1c15; padding: 9px;"> </td>
+<td style="background-color: #6d2c1e; padding: 9px;"> </td>
+<td style="background-color: #7b2c20; padding: 9px;"> </td>
+<td style="background-color: #8a2c22; padding: 9px;"> </td>
+<td style="background-color: #7f3f21; padding: 9px;"> </td>
+<td style="background-color: #9b4c20; padding: 9px;"> </td>
+<td style="background-color: #792a41; padding: 9px;"> </td>
+<td style="background-color: #905b24; padding: 9px;"> </td>
+<td style="background-color: #b06124; padding: 9px;"> </td>
+<td style="background-color: #cb412e; padding: 9px;"> </td>
+<td style="background-color: #c15b3f; padding: 9px;"> </td>
+<td style="background-color: #b97d32; padding: 9px;"> </td>
+<td style="background-color: #b08c2f; padding: 9px;"> </td>
+<td style="background-color: #ae8b57; padding: 9px;"> </td>
+</tr>
+</tbody>
+</table>
+<p>The technique does seem to fail if there are errant colors in the collection. Above, probably the light-purple book belongs on a different bookshelf. However, the PCA ordering does do a good job of smoothing the gradient.</p>
+<p>I projected the colours onto the first principle component, which is is $[0.57, 0.59, 0.56]$. Notice how close the values are. This means that the greatest variation in the colors is on the line that (close to) uniformly increases each rgb component. If you understand the rgb colour scale, this is equivalent to lightening vs darkening. So the above gradient is actually an ordering based on darkness level.</p>
+<p>This technique works surprisingly well, even considering how strange colours can transition. For example, below I generated 21 different colours from the <a href="/web/20150520142730/http://www.greyc.ensicaen.fr/~dtschump/CImg/img/reference/ref_colormap_jet.jpg">jet colourmap</a>. Here is the sample:</p>
+<table cellpadding="0" cellspacing="0" style="margin: 30px auto;">
+<tbody>
+<tr>
+<td style="background-color: #90ff66; padding: 9px;"> </td>
+<td style="background-color: #00bcff; padding: 9px;"> </td>
+<td style="background-color: #ffc800; padding: 9px;"> </td>
+<td style="background-color: #ffaa00; padding: 9px;"> </td>
+<td style="background-color: #0000ac; padding: 9px;"> </td>
+<td style="background-color: #ffbd00; padding: 9px;"> </td>
+<td style="background-color: #0000fe; padding: 9px;"> </td>
+<td style="background-color: #ff5100; padding: 9px;"> </td>
+<td style="background-color: #00d8ff; padding: 9px;"> </td>
+<td style="background-color: #0000ff; padding: 9px;"> </td>
+<td style="background-color: #ffb500; padding: 9px;"> </td>
+<td style="background-color: #ffe200; padding: 9px;"> </td>
+<td style="background-color: #70ff86; padding: 9px;"> </td>
+<td style="background-color: #a0ff56; padding: 9px;"> </td>
+<td style="background-color: #0064ff; padding: 9px;"> </td>
+<td style="background-color: #d50000; padding: 9px;"> </td>
+<td style="background-color: #ff7a00; padding: 9px;"> </td>
+<td style="background-color: #fe1200; padding: 9px;"> </td>
+<td style="background-color: #ffa600; padding: 9px;"> </td>
+<td style="background-color: #0000a3; padding: 9px;"> </td>
+<td style="background-color: #da0000; padding: 9px;"> </td>
+</tr>
+</tbody>
+</table>
+<p>And the PCA-ordered results are below:</p>
+<table cellpadding="0" cellspacing="0" style="margin: 30px auto;">
+<tbody>
+<tr>
+<td style="background-color: #ffe200; padding: 9px;"> </td>
+<td style="background-color: #ffc800; padding: 9px;"> </td>
+<td style="background-color: #ffbd00; padding: 9px;"> </td>
+<td style="background-color: #ffb500; padding: 9px;"> </td>
+<td style="background-color: #ffaa00; padding: 9px;"> </td>
+<td style="background-color: #ffa600; padding: 9px;"> </td>
+<td style="background-color: #ff7a00; padding: 9px;"> </td>
+<td style="background-color: #ff5100; padding: 9px;"> </td>
+<td style="background-color: #fe1200; padding: 9px;"> </td>
+<td style="background-color: #da0000; padding: 9px;"> </td>
+<td style="background-color: #d50000; padding: 9px;"> </td>
+<td style="background-color: #a0ff56; padding: 9px;"> </td>
+<td style="background-color: #90ff66; padding: 9px;"> </td>
+<td style="background-color: #70ff86; padding: 9px;"> </td>
+<td style="background-color: #00d8ff; padding: 9px;"> </td>
+<td style="background-color: #00bcff; padding: 9px;"> </td>
+<td style="background-color: #0064ff; padding: 9px;"> </td>
+<td style="background-color: #0000fe; padding: 9px;"> </td>
+<td style="background-color: #0000ff; padding: 9px;"> </td>
+<td style="background-color: #0000a3; padding: 9px;"> </td>
+<td style="background-color: #0000ac; padding: 9px;"> </td>
+</tr>
+</tbody>
+</table>
+<p>Fuck yea. It seems to order the colours quite well.</p>
+<h3>Conclusion</h3>
+<p>This seems to be a pretty good way to order colors into visually appealing gradients. Thanks, math, for making my life just a little bit easier.</p>

@@ -1,0 +1,101 @@
+---
+layout: post
+title:  "Joins in MapReduce Pt. 1 - Implementations in PySpark"
+date:   2017-01-13T14:00:56-05:00
+redirect_from:
+  - /blogs/napkin-folding/18130947-joins-in-mapreduce-pt-1-implementations-in-pyspark
+---
+
+<div>This is Part 1 on a series on joining datasets in a MapReduce environment.</div>
+<div></div>
+<div></div>
+<div>
+<ul>
+<li><a href="http://dataorigami.net/blogs/napkin-folding/18130947-joins-in-mapreduce-pt-1-implementations-in-pyspark" style="line-height: 1.5;">Pt. 1: Implementations in PySpark</a></li>
+<li><a href="http://dataorigami.net/blogs/napkin-folding/18433407-joins-in-mapreduce-pt-2-generalizing-joins" style="line-height: 1.5;">Pt. 2: Generalizing Joins</a></li>
+</ul>
+</div>
+<div></div>
+<h2>Introduction</h2>
+<div></div>
+<div></div>
+<p>In traditional databases, the JOIN algorithm has been exhaustively optimized: it's likely the bottleneck for most queries. On the other hand, MapReduce, being so primitive, has a simpler implementation. Let's look at a standard join in MapReduce (with syntax from PySpark). </p>
+<h2>Equality Join in PySpark</h2>
+<p>We start off with two datasets, that might resemble something like below</p>
+<pre><code># left               # right 
+(1, 'A', 'B' )   |   (1, 'Z', 'Y' ) 
+(2, 'C', 'D' )   |   (1, 'X', 'V' ) 
+(2, 'E', 'F' )   |   (2, 'W', 'U' ) 
+(3, 'E', 'F' )   |   (4, 'T', 'S' ) 
+</code></pre>
+<p>We need to specify a <i>key</i> for each record, something that we will use to join on. In PySpark, there is a <code>keyBy</code> function that allows you to set a key. Below is the resulting output. </p>
+<pre><code>left = left.keyBy(lambda r: r[0])
+right = right.keyBy(lambda r: r[0])
+
+# left                    # right 
+(1, (1, 'A', 'B') )   |   (1, (1, 'Z', 'Y' ))
+(2, (2, 'C', 'D') )   |   (1, (1, 'X', 'V' ))
+(2, (2, 'E', 'F') )   |   (2, (2, 'W', 'U' )) 
+(3, (3, 'E', 'F') )   |   (4, (4, 'T', 'S' )) 
+</code></pre>
+<p>Cool. Next we will add some values to denote the origin of the record: 1 if it is from <i>left, and 2 </i>if it is from<i> <i>right</i>.</i></p>
+<pre><code>left = left.map(lambda (k, v): (k, (1, v)))
+right = right.map(lambda (k, v): (k, (2, v)))
+<br/># left                         # right 
+(1, (1, (1, 'A', 'B')) )   |   (1, (2, (1, 'Z', 'Y')) )
+(2, (1, (2, 'C', 'D')) )   |   (1, (2, (1, 'X', 'V')) )
+(2, (1, (2, 'E', 'F')) )   |   (2, (2, (2, 'W', 'U')) ) 
+(3, (1, (3, 'E', 'F')) )   |   (4, (2, (4, 'T', 'S')) ) 
+
+# We now have (key, (origin, values)) tuples
+</code></pre>
+<p>Next we add the datasets together, using the <code>union</code> function.</p>
+<pre><code>unioned = left.union(right)
+
+# unioned
+(1, (1, (1, 'A', 'B')) )  # key = 1
+(2, (1, (2, 'C', 'D')) )  # key = 2
+(2, (1, (2, 'E', 'F')) )  # key = 2
+(3, (1, (3, 'E', 'F')) )  # key = 3
+(1, (2, (1, 'Z', 'Y')) )  # key = 1
+(1, (2, (1, 'X', 'V')) )  # key = 1
+(2, (2, (2, 'W', 'U')) )  # key = 2
+(4, (2, (4, 'T', 'S')) )  # key = 4
+</code></pre>
+<p>Up to now, we've really only been mapping. Next we want to start reducing. We start by performing a <code>groupByKey</code> on the dataset, which will send items with the same key to the same reducer. The group by key will also add up all records with the same key into a list, as we see below:</p>
+<pre><code>grouped = unioned.groupByKey()
+
+# grouped (each key goes to a different reducer)
+(1, [(1, (1, 'A', 'B')), (2, (1, 'Z', 'Y')), (2, (1, 'X', 'V'))])
+(2, [(1, (2, 'C', 'D')), (1, (2, 'E', 'F')), </code>(2, (2, 'W', 'U'))])<br/>(3, [(1, (3, 'E', 'F'))]) <br/>(4, [(2, (4, 'T', 'S'))]) <br/>We know have (key, [list of all elements with that key]) </pre>
+<p>Oh my god we're almost done! Finally, we take each array and map a function that will perform a mini-cross product:</p>
+<pre><code>result = grouped.flatMapValues(lambda x : dispatch(x))
+# Take each value (the list in the second position), and perform the dispatch function (below) on it. 
+# For example, let's look at the first element of grouped, i.e. key=1:
+
+def dispatch(seq):
+    left_origin = []
+    right_origin = []
+    for (n, v) in seq:
+        if n == 1:
+            left_origin.append(v)
+        elif n == 2:
+            right_origin.append(v)
+    return [(v, w) for v in left_origin for w in right_origin]
+
+For example:
+&gt; d = [(1, (1, 'A', 'B')), (2, (1, 'Z', 'Y')),(2, (1, 'X', 'V'))] 
+&gt; dispatch(d)
+[
+ ((1, 'A', 'B'), (1, 'Z', 'Y')), 
+ ((1, 'A', 'B'), (1, 'X', 'V'))
+ ]
+</code></pre>
+<p>Which is the correct result for joining left 1 keys against right 1 keys.</p>
+<h2>Limitations and Extensions</h2>
+<p>This is a neat way to perform a distributed map-reduce join. But there are limitations:</p>
+<ol>
+<li>Suppose there is a key that is incredibly common across the datasets. The groupby action will send all the records with that key to the same reducer, so at the very least slowing down the entire join, but also potentially blowing up its memory. This is called the <em>skew-problem</em>.</li>
+<li>The above algorithm works well for equality joins, that is, where we want keys to be equal. Sometimes we have different requirements on the join condition. For example, suppose I want to join on the lefthand key being equal to <em>or smaller </em>than the righthand key. Or more generally, any function \( l, r \mapsto f(l,r) \) that returns a boolean. </li>
+</ol>
+<p>This latter problem is called a \(theta\)-join, where in the case of an equality join \(theta\) is the equality operator. We'll explore how to solve <i>both</i> these problems at once <a href="http://dataorigami.net/blogs/napkin-folding/18433407-joins-in-mapreduce-pt-2-generalizing-joins">in the next blog post.</a></p>

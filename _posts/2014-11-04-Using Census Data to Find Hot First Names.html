@@ -1,0 +1,63 @@
+---
+layout: post
+title:  "Using Census Data to Find Hot First Names"
+date:   2014-11-04T22:49:40-05:00
+redirect_from:
+  - /blogs/napkin-folding/17543635-using-census-data-to-find-hot-first-names
+---
+
+<p>We explore some cool data on first names and introduce a library for making this data available. We then use k-means to find the most trending names right now, and introduce some ideas on age inference of users.</p>
+<h3>
+<i>Freakonomics</i>, the original Data Science book</h3>
+<p>One of the first data science books, though it wasn't labelled that at the time, was the excellent book "Freakonomics" (2005). The authors were the first to publicise using data to solve large problems, or to use data to discover novel details about society. The one chapter that I still deeply remember is their chapter on using first names from the US Census data to understand how first names change over time.</p>
+<p> </p>
+<p>For example, the first name "Sandra" has been a very popular name over the past century, while "Brittany" has a brief period of intense popularity during the 80s and early 90s before fading out. What are the results of this difference? If we extrapolate the year of birth until now, then most "Brittany"s now are between the ages of 15-29. In fact, you can be almost certain they are between these ages. On the other, "Sandra" has had a more sustainable popularity, but the name peaked in 1947 and has declined since. Below we plot the current ages of everyone in the US with first names "Brittany" or "Sandra"</p>
+<p><a href="https://gist.github.com/CamDavidsonPilon/e7fcbc9a3df748380dc0"><img class="display-image" src="https://i.imgur.com/9sPju0Il.png"/></a></p>
+<h3>
+<i>Demographica</i> - names analysis for Python</h3>
+<p>Freakonomics was the first book to bring this really cool idea, using first names to determine ages, to light. I was so inspired that I rushed out and gathered all the census data so I could play around with this myself. This inspiration finalized in the <a href="https://github.com/CamDavidsonPilon/demographica"><b>Demographica</b> library</a> (Latin for "population-drawing"), an easy way to query this data and answer questions about first names and age. Ex:</p>
+<script src="https://gist.github.com/CamDavidsonPilon/feadebb76faa353e52cc.js"></script>
+<h3>What are the names that are most stereotypically senior?</h3>
+<p>To do this, we can just look at the most common names in the <b>85 years and over</b> bucket:</p>
+<p>
+<script src="https://gist.github.com/CamDavidsonPilon/ec9ff1ae6cd3067924d9.js"></script>
+</p>
+<p>And what are the most common boy names these days? Similar to above: Jacob, Mason, Noah, Ethan, William, Michael and Jayden. What about your age? What are the most common names of people in your age bucket?</p>
+<h3>K-means clustering to find trending names</h3>
+<p>First of all, I was surprised this worked. I was curious about finding all the names that were really hot right now, or about to be really hot. For example, "Channing" is really hot right now: <img class="display-image" src="https://i.imgur.com/LiqOGoll.png"/></p>
+<p>I tried to think of some statistical ways to do this: compute the rate-of-change of the graph and determine some statistical thresholds, or create some complicated if-statements, etc. I didn't feel these were inspirational ideas. The idea of k-means crossed my mind, but I don't like using k-means on time series data - it just feels wrong. But, I did it anyways. Using some Pandas magic, I normalized each <b>Male</b> name to a probability distribution over the age buckets, and removed the bottom 90% of all names: this resulted in a list of 1300 popular names and their age distributions. (Why remove the bottom names? Name popularity are power-lawed - most names don't have enough data to form an accurate probability distribution.)</p>
+<p> </p>
+<p>Using scikit-learn and its K-Means implementation, I clustered the distributions into 12 clusters (arbitrarily picked 12). Here are the resulting <i>centers</i> of the clusters:</p>
+<img class="display-image" src="https://imgur.com/TxV8hwEl.png"/>
+<p>There's some pretty neat stuff happening here:</p>
+<ul>
+<li>Cluster 9 seems to be a group of names that became massively popular 15 to 30 years ago, and then burnt out quickly. Some examples names from this cluster are: Austen, Cody, Coty, Denzel, Dillon, Dominique, Mackenzie, Shaquille, Taylor, Tre, Tylor.</li>
+<li>The orange line, cluster 4, are names that our grandfathers enjoyed but now are very unpopular. Some names from that cluster: Adolph, Albert, Alfred, Alton, Arnold, Charlie, Chester, Clarence, Claude, Delmar, Donald, Edmund, Ellis (nice name), Mack, Maynard, Milton, Monroe, Norbert, Norman, Percy, Ray, Roosevelt, Roscoe, Sylvester, Sherman, Wilbert, Willis.</li>
+<li>The dark green line, cluster 3, are the current really hot names, but we can see they are about to peak (as all names seem to do). Names on this list are: Aden, Asher, Braxton, Braylon, Brody, Carter, Cohen, Eli, Enzo, Ezra, Gael, Grayson, Jaiden, Jameson, Jude, Korbin, London, Maddox, Matias, Mateo, Porter, Rylan, Sawyer, Sullivan, Yusuf.</li>
+<li>The peaked blue line that shoots straight up are the names I am interested in: these are the pre-hot names, the names that are just starting to register on trending lists. These names will be the biggest names in 5-10 years. On this list are: Atticus, Beckett, Bentley, Declan, Easton, Greyson, Iker, Jase, Jax, Jayce, Kamden, Karter, Kason, Kellan, Kingston, Paxton, Ryder, Ryker, Zayden</li>
+</ul>
+<p>You may laugh at that last list, until your own daughter brings home a Bently to meet the family</p>
+<p>Here's my <a href="https://gist.github.com/CamDavidsonPilon/71f189a92050832c0dc1">raw IPython code</a> if you want to reproduce the above analysis (I used %hist in my terminal to generate this)</p>
+<h3>Interested in the analysis for female names?</h3>
+<p>Me too, so I did the same analysis for Female names, below:</p>
+<img class="display-image" src="https://imgur.com/2nxoqGrl.png"/>
+<ul>
+<li><a href="https://gist.github.com/CamDavidsonPilon/0828530c270471d235d6">Cluster 4 - The Grandmas</a></li>
+<li><a href="https://gist.github.com/CamDavidsonPilon/098c93a29a37fcf1b8ab"> Cluster 7 - The Current Hotties (peak popularity) </a></li>
+<li><a href="https://gist.github.com/CamDavidsonPilon/255c0089a70e814de23d">Cluster 1 - The Super Trenders (will peak in a few years)</a></li>
+</ul>
+<h3>Finding flash-in-the-pan names</h3>
+<p>My friend who I was hacking on this with asked "Find some names that were massively popular for a very short period of time". To do this, I increased the value of k to 35, and plotted the cluster centers (Why? I knew a name like that would have a very spiked distribution, and if I plotted it it would stand out among the others - but I needed more granularity in the clusters to find it. So I increased k to 35): /p&gt; <img class="display-image" src="https://imgur.com/uMjJjtcl.png"/></p>
+<p>Bingo. That peaked distribution contain the names we want. Only two names were in that list: Catina and Katina. Both were massively popular about 40 years ago. A quick google search on Katina (the more popular to the two) determined the name was used for a newborn baby on the soap opera 'Where the Heart Is' in 1972.</p>
+<h3>Age Inference</h3>
+<p>Demographica is good for looking at age distributions of certain names but has another cool feature: population age inference. Let's say you run a small ecommerce website, and each order has an associated name with it. You are probably curious about the age distribution of your customers. The next steps of Demographica will enable the user to infer age distributions of their user. How do to this?</p>
+<ol>
+<li>Let <b>p</b> be a probability vector of a user with name i visiting your site. Let <b>P</b> be the matrix of age distributions, index by first names.The current age distribution is given by the multiplication of <b>P</b> and <b>p</b>. We know <b>P</b> (it's the data), but we don't know <b>p</b>.</li>
+<li>Let's setup a suitable prior on <b>p</b>: the Dirichlet seems right, and we can use the dataset to populate the prior.</li>
+<li>Updating the prior with new observations is simple, and we recompute the product of <b>P</b> and <b>p</b>.</li>
+</ol>
+<p>That's the idea, at least. I'll report back with how it goes!</p>
+<h3>References</h3>
+<ol>
+<li>Steven Levitt and Stephen J. Dubner (2005). Freakonomics: A Rogue Economist Explores the Hidden Side of Everything. William Morrow/HarperCollins. ISBN 0-06-073132-X.</li>
+</ol>

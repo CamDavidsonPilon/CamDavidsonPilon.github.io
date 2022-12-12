@@ -1,0 +1,58 @@
+---
+layout: post
+title:  "The Class Imbalance Problem in A/B Testing"
+date:   2015-11-22T14:58:08-05:00
+redirect_from:
+  - /blogs/napkin-folding/17987495-the-class-imbalance-problem-in-a-b-testing
+---
+
+<h2>Introduction</h2>
+<p>If you have been following this blog, you'll know that I employ Bayesian A/B testing for conversion tests (and <a href="/web/20150914195832/https://dataorigami.myshopify.com/products/a-b-testing-conversion-rates" title="A/B testing conversion rates">see this screencast</a> to see how it works). One of the strongest reasons for this is the interpretability of the analogous "p-value", which I call <i>Confidence</i>, defined as the probability the conversion rate of <em>A </em>is greater than<em> B, </em></p>
+<p>$$\text{confidence} = P( C_A &gt; C_B ) $$</p>
+<p>Really, this is what the experimenter wants - an answer to: "what are the chances I am wrong?". So if I saw a confidence of 1.0 (or as I report it, 100%), I would have to conclude that I know <em>for certain</em> which group is superior.</p>
+<p>In practice, I've encountered a 100% confidence a few times, most often in two situations: when my sample size is very low, and when my sample size is very high. The latter situation makes sense: I have lots of data, enough so my testing algorithm can confidently conclude a winner. The former, when I have a small sample size, makes less sense - at first. Suppose the difference between the groups is small, then it doesn't make sense for my algorithm to be so certain in a winner. Instead what is happening is a break down between theory and practice.</p>
+<p> </p>
+<h2>Assumptions of A/B Testing</h2>
+<p>Let's go back to the beginning. What are the assumptions of A/B testing. Luckily, they are quite short:</p>
+<p>1. Before any treatment, your groups are the same.</p>
+<p>That's it! The A/B testing algorithm proceeds by applying a treatment to one of the groups and you measure the results in both groups. In practice however, our groups are not the same. The best we can do is have them "statistically" equal, that is to say, equal on average. In practice, we need to rely on the Law of Large Numbers to make our groups statistically equal. Unfortunately, the LLN works for large sample sizes only - you can't assume equal, or even similar, populations with small sample sizes.</p>
+<p> </p>
+<h2></h2>
+<h2>The Class Imbalance Problem</h2>
+<p>With small sample sizes, and even with medium sample sizes, your groups will be different and there is nothing you can do about it. Perhaps just by chance, more people who were going to convert were put in Bucket A, and thus the treatment's effect is dwarfed by this chance event. This is the class imbalance problem. This is why I was seeing 100% confidence with small sample sizes: by chance a bunch of converters were put into a single bucket and my A/B test algorithm was assuming equal populations.</p>
+<p>Let's make this more formal. Define delta, denoted \(\delta\) as the observed difference between the two groups. \(\delta\) can be broken down into two parts:</p>
+<p>$$ \delta = \delta_{ci} + \delta_{T}$$</p>
+<p>where \(\delta_{T}\) is the difference in conversion rates due to the treatment, and \(\delta_{ci}\) is the difference due to the class imbalance problem. I'm curious about the variance in the observed <span>\(\delta\)</span><span style="line-height: 1.2;">, that is, how extreme might my observed \(\delta\) be. Taking the variance of both sides:</span></p>
+<meta charset="utf-8"/>
+<p>$$ \text{Var}(\delta) = \text{Var}(\delta_{ci}) + \text{Var}(\delta_{T}) $$</p>
+<p>(As the two terms on the right hand side are independent, there will be no correlation term).</p>
+<h3>What is the Influence of Class Imbalance?</h3>
+<p>Let's do an A/A test: that is, let's not apply a treatment to either group. Then \(\delta_{T}=0\). So any variance we see in the observed delta is due purely to variance from the class imbalance problem. Hence in an A/A test:</p>
+<meta charset="utf-8"/>
+<p>$$ \text{Var}(\delta) = \text{Var}(\delta_{ci})$$</p>
+<p>To find the variance, we'll perform some Monte Carlo simulations of a typical A/A test. Here are the steps:</p>
+<ol>
+<li>Gather \(N\) individuals, each who will convert with probability \(p\).</li>
+<li>Assign each individual to group \(A\) with probability .5 (note this does imply exactly half will be in one group, and the other half in the other group).</li>
+<li>Allow the individuals to convert or not. Compute the observed \(\delta\) equal to the difference between the observed fraction of conversions to population size.</li>
+<li>Do the above thousands of times, and compute the variance of the \(\delta\)'s.</li>
+<li>Do the above again, varying \(N\) and \(p\) .</li>
+</ol>
+<p>Below is the Python code for this simulation:</p>
+<script src="/web/20150914195832js_/https://gist.github.com/CamDavidsonPilon/e78fddff916dc47145f9.js"></script>
+<p> </p>
+<p>Below is a grid of the observed variances, varying \(p\) and \(N\):</p>
+<p><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/nonlog_large.png?14771869060070599988"/></p>
+<p> </p>
+<p>White is good: it implies the LLN has taken over and there is little variance in the observed <span>\(\delta\)</span>. This is where an A/B experiment works: observed difference in the groups are highly likely to be the result of the treatment. If this is hard to read due to the lack of contrast, below is the log-plot of the above:</p>
+<p> </p>
+<p><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/log_large.png?14771869060070599988"/></p>
+<p> </p>
+<h2>What Does All This Mean?</h2>
+<p>It means you have to distrust A/B results will small sample sizes, at least if the variance of the class imbalance problem is of the same order of magnitude as the variance of the treatment effect.</p>
+<p>Furthermore, this is <em>another</em> reason why we see these huge "unicorn" experiments (ugh, this is term coined by a recent article that claimed 1000% improvement from an experiment). Suppose there is a positive increase from treatment <em>and </em>that group was assigned significantly more converters just by chance (and the sample size is small enough to allow this), then your estimate of "lift" is going to be much larger than it actually is. Compound this with <a href="/web/20150914195832/https://dataorigami.myshopify.com/blogs/napkin-folding/17543303-the-binary-problem-and-the-continuous-problem-in-a-b-testing">mistaking the binary problem with the continuous problem</a>, and you've got the recipe for the <em>﻿</em><em><span>1000% </span></em><span>improvement fallacy.</span></p>
+<p> </p>
+<h2><span>Conclusion</span></h2>
+<p>Hopefully, you've learned from my mistake: don't believe anything with small sample sizes, especially if your treatment effect is very small. You can use the above figures to determine the variance at different population sizes and conversion probabilities (how do you know the conversion probability? Well, you don't - best to estimate it with the total conversion rate: total converts / total population). If the variance at that point is too high, then likely your observed delta is being influenced strongly by the class imbalance problem and not the treatment effect. You can find a csv of the data in the <a href="/web/20150914195832/https://gist.github.com/CamDavidsonPilon/d312158cc7d8c83edeab">gist here</a>.</p>
+<p> </p>
+<p>Thanks to Chris Harland and Putra Manggala for their time discussing these ideas.</p>

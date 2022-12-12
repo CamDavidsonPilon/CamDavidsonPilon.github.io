@@ -1,0 +1,151 @@
+---
+layout: post
+title:  "Using Statistics to Make Statistics Faster"
+date:   2020-04-27T08:31:29-04:00
+redirect_from:
+  - /blogs/napkin-folding/using-statistics-to-make-statistical-computations-faster
+---
+
+<p>While working on my side project <a href="https://github.com/camdavidsonpilon/lifelines"><em>lifelines</em></a>, I noticed a surprising behaviour. In <em>lifelines</em>, there are two classes that implement the Cox proportional hazard model. The first class, <code>CoxTimeVaryingFitter</code>, is used for time-varying datasets. Time-varying datasets require a more complicated algorithm, one that works by iterating over all unique times and "pulling out" the relevant rows associated with that time. It's a slow algorithm, as it requires lots of Python/Numpy indexing, which gets worse as the dataset size grows. Call this algorithm <strong>batch</strong>. The second implemented class, <code>CoxPHFitter</code>, is used for static datasets. <code>CoxPHFitter</code> uses a simpler algorithm that iterates over every row once only, and requires minimal indexing. Call this algorithm <strong>single</strong>¹.</p>
+<p>The strange behaviour I noticed was that, for my benchmark static dataset, the more-complicated <code>CoxTimeVaryingFitter</code> was actually <em>faster</em> than my simpler <code>CoxPHFitter</code> model. Like almost twice as fast.</p>
+<p>The thought occurred to me that iterating over all unique times has an advantage versus iterating over all rows <em>when the cardinality of times is small relative to the number of rows</em>. That is, when there are lots of ties in the dataset, our batch algorithm should perform faster. In one extreme limit, when there is no variation in times, the batch algorithm will perform a single loop and finish. However, in the other extreme limit where all times are unique, our batch algorithm does expensive indexing too often.</p>
+<p>This means that the algorithms will perform differently on different datasets (however the returned results should still be identical). And the magnitude of the performances is like a factor of 2, if not more. But given a dataset at runtime, how can I know which algorithm to choose? It would be unwise to let the untrained user decide - they should be abstracted away from this decision.</p>
+<h2 id="generating-artificial-datasets">Generating artificial datasets</h2>
+<p>As a first step, I wanted to know <em>how</em> often the batch algorithm outperformed the single algorithm. To do this, I needed to create datasets with different sizes and varying fractions of tied times. For the latter characteristic, I defined the (very naive) statistic as:</p>
+<p>$$\text{n unique times} = \text{frac}\; \cdot \; \text{n rows} $$</p>
+<p>Once dataset creation was done, I generated many combinations and timed the performance of both the batch algorithm (now natively ported to <code>CoxPHFitter</code>) and the single algorithm. A sample of the output is below (the time units are seconds).</p>
+<pre><code></code></pre>
+<table width="100%">
+<tbody>
+<tr>
+<td><strong> N</strong></td>
+<td><strong>frac</strong></td>
+<td><strong>batch</strong></td>
+<td><strong>single</strong></td>
+</tr>
+<tr>
+<td>432</td>
+<td>0.010</td>
+<td>0.175</td>
+<td>0.249</td>
+</tr>
+<tr>
+<td>432</td>
+<td>0.099</td>
+<td>0.139</td>
+<td>0.189</td>
+</tr>
+<tr>
+<td>432</td>
+<td>0.189</td>
+<td>0.187</td>
+<td>0.198</td>
+</tr>
+<tr>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+</tbody>
+</table>
+<p><br/>So, for 432 rows, and a very high number of ties (i.e. low count of unique times) we see that the batch algorithm performance of 0.18 seconds vs 0.25 seconds for the single algorithm. Since I'm only comparing two algorithms and I'm interested in the faster one, the <em>ratio</em> of batch performance to single performance is just as meaningful. Here's all the raw <a href="https://gist.github.com/CamDavidsonPilon/af12ea980025b9d2b3d013c8d9251e3e">data</a>. </p>
+<p><a href="https://gist.github.com/CamDavidsonPilon/af12ea980025b9d2b3d013c8d9251e3e"></a>Looking at the raw data, it's not clear what the relationship is between N, frac, and ratio. Let's plot the data instead:</p>
+<p><img alt="" src="ScreenShot2019-01-03at1-2c187432-fbff-4802-825a-56057d8cfc98.06.51PM.png"/></p>
+<p><img alt="" height="241" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-01-03_at_1.06.42_PM_large.png?v=1546544447" width="306"/><img alt="" src="ScreenShot2019-01-03at1-69478111-7888-4f0a-8e19-b616137b4efb.07.03PM.png"/><img alt="" height="252" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-01-03_at_1.06.51_PM_large.png?v=1546544432" width="308"/></p>
+<p><img alt="" src="ScreenShot2019-01-03at1-070a218c-be34-4207-8de8-be2933e7bc97.06.42PM.png"/></p>
+<p>What we can see is that the ratio variable increases <em>almost</em> linearly with N and frac. Almost linearly. At this point, one idea is to compute both the statistics (N, frac) for a given dataset (at runtime, it's cheap), and <em>predict</em> what its ratio is going to be. If that value is above 1, use single algorithm, else use batch algorithm. </p>
+<p>We can run a simple linear regression against the dataset of runtimes, and we get the following:</p>
+<pre><code><span class="hljs-keyword">import</span> statsmodels.api <span class="hljs-keyword">as</span> sm
+
+X = results[[<span class="hljs-string">"N"</span>, <span class="hljs-string">"frac"</span>]]
+X = sm.add_constant(X)
+
+Y = results[<span class="hljs-string">"ratio"</span>]
+
+
+model = sm.OLS(Y, X).fit()
+print(model.summary())
+
+OLS Regression Results
+==============================================================================
+Dep. <span class="hljs-string">Variable:</span>                  ratio   R-<span class="hljs-string">squared:</span>                       <span class="hljs-number">0.933</span>
+<span class="hljs-string">Model:</span>                            OLS   Adj. R-<span class="hljs-string">squared:</span>                  <span class="hljs-number">0.931</span>
+<span class="hljs-string">Method:</span>                 Least Squares   F-<span class="hljs-string">statistic:</span>                     <span class="hljs-number">725.8</span>
+<span class="hljs-string">Date:</span>                Thu, <span class="hljs-number">03</span> Jan <span class="hljs-number">2019</span>   Prob (F-statistic):           <span class="hljs-number">3.34e-62</span>
+<span class="hljs-string">Time:</span>                        <span class="hljs-number">13</span>:<span class="hljs-number">11</span>:<span class="hljs-number">37</span>   Log-<span class="hljs-string">Likelihood:</span>                 <span class="hljs-number">68.819</span>
+No. <span class="hljs-string">Observations:</span>                 <span class="hljs-number">108</span>   <span class="hljs-string">AIC:</span>                            <span class="hljs-number">-131.6</span>
+Df <span class="hljs-string">Residuals:</span>                     <span class="hljs-number">105</span>   <span class="hljs-string">BIC:</span>                            <span class="hljs-number">-123.6</span>
+Df <span class="hljs-string">Model:</span>                           <span class="hljs-number">2</span>
+Covariance <span class="hljs-string">Type:</span>            nonrobust
+==============================================================================
+                 coef    std err          t      P&gt;|t|      [<span class="hljs-number">0.025</span>      <span class="hljs-number">0.975</span>]
+------------------------------------------------------------------------------
+const          <span class="hljs-number">0.3396</span>      <span class="hljs-number">0.030</span>     <span class="hljs-number">11.367</span>      <span class="hljs-number">0.000</span>       <span class="hljs-number">0.280</span>       <span class="hljs-number">0.399</span>
+N           <span class="hljs-number">4.135e-05</span>   <span class="hljs-number">4.63e-06</span>      <span class="hljs-number">8.922</span>      <span class="hljs-number">0.000</span>    <span class="hljs-number">3.22e-05</span>    <span class="hljs-number">5.05e-05</span>
+frac           <span class="hljs-number">1.5038</span>      <span class="hljs-number">0.041</span>     <span class="hljs-number">37.039</span>      <span class="hljs-number">0.000</span>       <span class="hljs-number">1.423</span>       <span class="hljs-number">1.584</span>
+==============================================================================
+<span class="hljs-string">Omnibus:</span>                        <span class="hljs-number">3.371</span>   Durbin-<span class="hljs-string">Watson:</span>                   <span class="hljs-number">1.064</span>
+Prob(Omnibus):                  <span class="hljs-number">0.185</span>   Jarque-Bera (JB):                <span class="hljs-number">3.284</span>
+<span class="hljs-string">Skew:</span>                          <span class="hljs-number">-0.166</span>   Prob(JB):                        <span class="hljs-number">0.194</span>
+<span class="hljs-string">Kurtosis:</span>                       <span class="hljs-number">3.787</span>   Cond. No.                     <span class="hljs-number">1.77e+04</span>
+==============================================================================
+</code></pre>
+<p>Plotting this <em>plane-of-best-fit:</em></p>
+<p><img alt="" src="ScreenShot2019-01-03at1-31ce3262-1ca1-4e06-8d64-c5c29d15641d.13.00PM.png"/><img alt="" height="272" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-01-03_at_1.13.00_PM_large.png?v=1546544505" width="305"/><img alt="" height="287" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-01-03_at_1.13.05_PM_large.png?v=1546544498" width="311"/></p>
+<p><img alt="" src="ScreenShot2019-01-03at1-7842ece4-659e-4c1f-b9da-aa9b3817d69a.13.05PM.png"/>We can see that the fit is pretty good, but there is some non-linearities in the second figure we aren't capturing. We should expect non-linearities too: in the batch algorithm, the average batch size is (N * frac) data points, so this interaction should be a factor in the batch algorithm's performance. Let's include that interaction in our regression:</p>
+<pre><code><span class="hljs-keyword">import</span> statsmodels.api <span class="hljs-keyword">as</span> sm
+
+results[<span class="hljs-string">"N * frac"</span>] = results[<span class="hljs-string">"N"</span>] * results[<span class="hljs-string">"frac"</span>]
+
+X = results[[<span class="hljs-string">"N"</span>, <span class="hljs-string">"frac"</span>, <span class="hljs-string">"N * frac"</span>]]
+X = sm.add_constant(X)
+
+Y = results[<span class="hljs-string">"ratio"</span>]
+
+
+model = sm.OLS(Y, X).fit()
+print(model.summary())
+
+OLS Regression Results
+==============================================================================
+Dep. <span class="hljs-string">Variable:</span>                  ratio   R-<span class="hljs-string">squared:</span>                       <span class="hljs-number">0.965</span>
+<span class="hljs-string">Model:</span>                            OLS   Adj. R-<span class="hljs-string">squared:</span>                  <span class="hljs-number">0.964</span>
+<span class="hljs-string">Method:</span>                 Least Squares   F-<span class="hljs-string">statistic:</span>                     <span class="hljs-number">944.4</span>
+<span class="hljs-string">Date:</span>                Thu, <span class="hljs-number">03</span> Jan <span class="hljs-number">2019</span>   Prob (F-statistic):           <span class="hljs-number">2.89e-75</span>
+<span class="hljs-string">Time:</span>                        <span class="hljs-number">13</span>:<span class="hljs-number">16</span>:<span class="hljs-number">48</span>   Log-<span class="hljs-string">Likelihood:</span>                 <span class="hljs-number">103.62</span>
+No. <span class="hljs-string">Observations:</span>                 <span class="hljs-number">108</span>   <span class="hljs-string">AIC:</span>                            <span class="hljs-number">-199.2</span>
+Df <span class="hljs-string">Residuals:</span>                     <span class="hljs-number">104</span>   <span class="hljs-string">BIC:</span>                            <span class="hljs-number">-188.5</span>
+Df <span class="hljs-string">Model:</span>                           <span class="hljs-number">3</span>
+Covariance <span class="hljs-string">Type:</span>            nonrobust
+==============================================================================
+                 coef    std err          t      P&gt;|t|      [<span class="hljs-number">0.025</span>      <span class="hljs-number">0.975</span>]
+------------------------------------------------------------------------------
+const          <span class="hljs-number">0.5465</span>      <span class="hljs-number">0.030</span>     <span class="hljs-number">17.941</span>      <span class="hljs-number">0.000</span>       <span class="hljs-number">0.486</span>       <span class="hljs-number">0.607</span>
+N          <span class="hljs-number">-1.187e-05</span>   <span class="hljs-number">6.44e-06</span>     <span class="hljs-number">-1.843</span>      <span class="hljs-number">0.068</span>   <span class="hljs-number">-2.46e-05</span>    <span class="hljs-number">9.05e-07</span>
+frac           <span class="hljs-number">1.0899</span>      <span class="hljs-number">0.052</span>     <span class="hljs-number">21.003</span>      <span class="hljs-number">0.000</span>       <span class="hljs-number">0.987</span>       <span class="hljs-number">1.193</span>
+N * frac       <span class="hljs-number">0.0001</span>    <span class="hljs-number">1.1e-05</span>      <span class="hljs-number">9.702</span>      <span class="hljs-number">0.000</span>    <span class="hljs-number">8.47e-05</span>       <span class="hljs-number">0.000</span>
+==============================================================================
+<span class="hljs-string">Omnibus:</span>                       <span class="hljs-number">10.775</span>   Durbin-<span class="hljs-string">Watson:</span>                   <span class="hljs-number">1.541</span>
+Prob(Omnibus):                  <span class="hljs-number">0.005</span>   Jarque-Bera (JB):               <span class="hljs-number">21.809</span>
+<span class="hljs-string">Skew:</span>                          <span class="hljs-number">-0.305</span>   Prob(JB):                     <span class="hljs-number">1.84e-05</span>
+<span class="hljs-string">Kurtosis:</span>                       <span class="hljs-number">5.115</span>   Cond. No.                     <span class="hljs-number">3.43e+04</span>
+==============================================================================
+</code></pre>
+<p><img alt="" src="ScreenShot2019-01-03at1-2654a181-077c-4a6f-8d1f-f5ecb44a3481.17.41PM.png"/></p>
+<p><img alt="" height="264" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-01-03_at_1.17.41_PM_large.png?v=1546544543" width="327"/><img alt="" src="ScreenShot2019-01-03at1-2fde1cf0-9fc4-497b-a455-7fd079d31471.18.01PM.png"/><img alt="" height="276" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-01-03_at_1.18.01_PM_large.png?v=1546544537" width="298"/></p>
+<p>Looks like we capture more of the variance (\(R^2\)), and the optical-fit looks better too! So where are we?</p>
+<ol>
+<li>Given a dataset, I can compute its statistics, N and frac, at runtime.</li>
+<li>I enter this into my linear model (with an interaction term), and it predicts the ratio of batch performance to single performance</li>
+<li>If this prediction is greater than 1.0, I choose single, else batch.</li>
+</ol>
+<p>This idea was recently implemented in <em>lifelines</em>, and with some other optimizations to the batch algorithm, we see a 60% speedup on some datasets!</p>
+<h2 id="notes-and-extensions">Notes and extensions</h2>
+<ul>
+<li>This is a binary problem, batch vs single, so why not use logistic regression? Frank Harrell, one of the greatest statisticians, would not be happy with that. He advocates against the idea of false dichotomies in statistics (ex: rate &gt; some arbitrary threshold, unnecessary binning of continuous variables, etc.). This is a case of that: we should be modelling the ratio and not the sign. In doing so, I retain maximum information for the algorithm to use.</li>
+<li>More than 2 algorithms to choose from? Instead of modelling the ratio, I can model the performance per algorithm, and choose the algorithm that is associated with the smallest prediction.</li>
+<li>L1, L2-Penalizers? Cross-validation? IDGAF. These give me minimal gains. Adding the interaction term was borderline going overboard.</li>
+<li>There is an asymmetric cost of being wrong I would like to model. Choosing the batch algorithm incorrectly could have much worse consequences on performance than if I chose the single algorithm incorrectly. To model this, instead of using a linear model with squared loss, I could use a quantile regression model with <a href="https://stats.stackexchange.com/questions/102986/percentile-loss-functions">asymmetric loss</a>.</li>
+</ul>
+<p>¹ ugh, naming is hard.</p>

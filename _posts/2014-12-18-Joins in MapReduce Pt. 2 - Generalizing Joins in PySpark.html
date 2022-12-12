@@ -1,0 +1,34 @@
+---
+layout: post
+title:  "Joins in MapReduce Pt. 2 - Generalizing Joins in PySpark"
+date:   2014-12-18T22:31:30-05:00
+redirect_from:
+  - /blogs/napkin-folding/18433407-joins-in-mapreduce-pt-2-generalizing-joins-in-pyspark
+---
+
+<meta charset="utf-8"/>
+<div>This is Part 2 on a series on joining datasets in a MapReduce environment.</div>
+<div>
+<ul>
+<li><a href="http://dataorigami.net/blogs/napkin-folding/18130947-joins-in-mapreduce-pt-1-implementations-in-pyspark">Pt. 1: Implementations in PySpark</a></li>
+<li><a href="http://dataorigami.net/blogs/napkin-folding/18433407-joins-in-mapreduce-pt-2-generalizing-joins">Pt. 2: Generalizing Joins</a></li>
+</ul>
+</div>
+<h2>Introduction</h2>
+<p>In the <a href="http://dataorigami.net/blogs/napkin-folding/18130947-joins-in-mapreduce-pt-1-implementations-in-pyspark" title="Joins in MapReduce Pt. 1 - Implementations in PySpark">previous article</a> in this series on Joins in MapReduce, we looked at how a traditional join is performed in a distributed map-reduce setting. I next want to generalize the idea of a join: typically we think of joining rows on <em>equal keys, </em>but more generally, you could join two rows on any function that returns a boolean: <span style="line-height: 1.2;">\( l, r \mapsto \theta(l,r) \). We call these generalized joins \(\theta\)-joins, or </span><em style="line-height: 1.2;">theta-joins. </em><span style="line-height: 1.2;">Because of the arbitrariness of the \(\theta\) function, theta-joins can be incredibly more computationally challenging. Here are some examples of theta-joins:</span></p>
+<ol>
+<li><code>R.key &lt; L.key</code></li>
+<li><code>|R.key - L.key| &lt; 2</code></li>
+<li><code>R.key1 = L.key1 and R.key2 = L.key2</code></li>
+</ol>
+<p>And then, implementing a theta-join in mapreduce is even more challenging! If you recall the <a href="http://dataorigami.net/blogs/napkin-folding/18130947-joins-in-mapreduce-pt-1-implementations-in-pyspark">previous join algorithm</a>, where we implemented an <em>equality-join </em>hence \(\theta\) equaled the equality operator, we used an implicit trick: rows with the same key on the lefthand side and the righthand side would map to the same reducer in the <code>groupByKey</code> step. Really, no joining is actually done pre-reducer, just organizing. So how do we implement a theta-join in mapreduce?</p>
+<p> </p>
+<h2>1-Bucket-Theta Algorithm</h2>
+<p>Unfortunately, the problem is not generally solved. For very specific join types, there might exist very fragile tricks that one can use, but they are not generalizable. In order to accommodate any join, you'll need to check all elements of the RHS (righthand side) against all elements of the LHS (lefthand side). This is inefficient or just generally crappy, so how can we reduce the crappiness? The authors of a pretty accessible paper, <a href="http://www.ccs.neu.edu/home/mirek/papers/2011-SIGMOD-ParallelJoins.pdf">Processing Theta-Joins using MapReduce</a>, present an efficient way to partition this cross-product (what they call the join-space) across the reducers. What's unique about this algorithm is because of it's randomness (yes, it's stochastic), it handles the skew-problem common in mapreduce joins gracefully. </p>
+<p>Below is a PySpark implementation of the 1-Bucket-Theta join:</p>
+<script src="https://gist.github.com/CamDavidsonPilon/8750e37242c4942c1984.js"></script>
+<p>And some example usage using datetimes, this might be called an <i>interval-join </i>as I'm searching for rows that have a datetime that falls into a interval. </p>
+<script src="https://gist.github.com/CamDavidsonPilon/44afe62318832531d6d3.js"></script>
+<h2>Caveat. </h2>
+<p>Sorry, but the above implementation is just too inefficient: that join-space I mentioned above, which is the cross-product of the datasets, is simply too big. Most rows will not be included in the result set, yet we check them anyways. This is the burden of the theta-join. Though I don't follow suite, the paper does examine gains by using some summary statistics from the LHS and RHS to improve the performance of certain types of theta-joins.</p>
+<p> </p>

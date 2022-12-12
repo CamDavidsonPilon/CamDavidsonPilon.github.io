@@ -1,0 +1,36 @@
+---
+layout: post
+title:  "The Delta-Method and Autograd"
+date:   2019-05-22T22:41:54-04:00
+redirect_from:
+  - /blogs/napkin-folding/the-delta-method-and-autograd
+---
+
+<p>One of the reasons I’m really excited about <a href="https://github.com/HIPS/autograd/tree/master/autograd">autograd</a> is because it enables me to be able to transform my abstract parameters into business-logic. Let me explain with an example. Suppose I am modeling customer churn, and I have fitted a Weibull survival model using maximum likelihood estimation. I have two parameter estimates: lambda-hat and rho-hat. I also have their covariance matrix, which tells me how much uncertainty is present in the estimates (in lifelines, this is under the <code>variance_matrix_</code> property). From this, I can plot the survival curve, which is fine, but what I really want is a measure of lifetime value.</p>
+<p>Suppose customers give us $10 each time period for the first 3 time periods, and then $30 each time period afterwards. For a single user, the average LTV (up to <code>timeline</code>) calculation might look like:</p>
+<pre><code class="python"># create a Weibull model with fake data
+wf = WeibullFitter().fit(np.arange(1, 100))
+
+from autograd import numpy as np
+
+def LTV(params, timeline):
+    lambda_, rho_ = params
+    sf = np.exp(-(timeline/lambda_) ** rho_)
+    clv = 10 * (timeline &lt;= 3) * sf + 30 * (timeline &gt; 3) * sf
+    return clv.sum()
+
+timeline = np.arange(10)
+params = np.array([wf.lambda_, wf.rho_])
+
+LTV(params, timeline)
+# 214.76</code></pre>
+<p>This gives me a point estimate. But I also want the variance, since there is uncertainty in lambda-hat and rho-hat. There is a technique called the <a href="https://en.wikipedia.org/wiki/Delta_method">delta-method</a> that allows me to transform variance from one domain to another. But to use that, I need the gradient of LTV w.r.t to lambda and rho. For this problem, I could probably write out the gradient, but it would be messy and error-prone. I can use autograd instead to do this.</p>
+<pre><code class="python">from autograd import grad
+gradient_LTV = grad(LTV)
+
+gradient_LTV(params, timeline)
+# array([ 0.15527043, 10.78900217])</code></pre>
+<p>The output of the above is the gradient at the <code>params</code> value. Very easy. Now, if I want the variance of the LTV, the delta methods tells me to multiply gradient by the covariance matrix and the gradient’s transpose (check: this should return a scalar and not a vector/matrix):</p>
+<pre><code class="python">var = gradient_LTV(params, timeline)\<br/>          .dot(wf.variance_matrix_)\<br/>          .dot(gradient_LTV(params, timeline))
+# 3.127</code></pre>
+<p>So, my best estimate of LTV (at timeline=10) is 214.76 (3.127). From this, we can build confidence intervals, etc.</p>

@@ -1,0 +1,28 @@
+---
+layout: post
+title:  "Replicating 538's plot styles in Matplotlib"
+date:   2014-11-02T17:11:48-05:00
+redirect_from:
+  - /blogs/napkin-folding/17543615-replicating-538s-plot-styles-in-matplotlib
+---
+
+<p>Nate Silver's FiveThirtyEight site has some aesthetically pleasing figures, ignoring the content of the plots for a moment:</p>
+<img class="display-image" src="http://espnfivethirtyeight.files.wordpress.com/2014/07/ozler-feature-brazilincome1.png" width="300"/> <img class="display-image" src="http://espnfivethirtyeight.files.wordpress.com/2014/07/munguia-datalab-fireworks2.png" width="300"/>
+<p>After pulling a few graphs locally, sampling colors, and crowd-sourcing the fonts used, I was able to come pretty close to replicating the style in Matplotlib styles. Here's an example (my figure dropped into an article on FiveThirtyEight.com)</p>
+<img class="display-image" src="//i.imgur.com/RfS3BCul.png"/>
+<p>Another example using the replicated styles:</p>
+<img class="display-image" src="//i.imgur.com/eFkjNs0l.png"/>
+<h3>So how to do it?</h3>
+<p><b>[Edit: these steps are old, you can still use them, but there is a better solution in the Update below]</b>. I've prepacked the styles in a json file, <a href="https://gist.github.com/CamDavidsonPilon/5238b6499b14604367ac#file-538-json">located in this gist</a>. Saving that file locally, you can use the following code to load it temporarily into your matplotlib styles: <a href="https://gist.github.com/CamDavidsonPilon/5238b6499b14604367ac#file-load_538-py">code here</a>.</p>
+<h4>Notable Departures</h4>
+<ul>
+<li>The font they use for their axes is Decima Mono, a paywalled font, and there are no available alternatives.</li>
+<li>They often have healthy margins between the lines and the axes, I wasn't able to replicate this.</li>
+<li>Their figures almost always have a title and subtitle of different weights.</li>
+</ul>
+<h3>Conclusion</h3>
+<p>I'm not sure what software the team at FiveThirtyEight uses (Excel, Stata?), but there is definitely some post-processing of whatever the software spits out. The same can be done here, in which case you could achieve complete replication.</p>
+<h3>Update</h3>
+<p>Here's an <a href="http://austinclemens.com/blog/2014/07/03/fivethirtyeight-com-style-graphs-in-ggplot2/">R version</a> that <a href="http://www.twitter.com/AustinClemens2">@AustinClemens2</a> worked out.</p>
+<p><b>New way:</b> Matplotlib 1.4 now handles changing styles really well, using the <code>plt.style.use('ggplot')</code> syntax. (See full <a href="https://github.com/matplotlib/matplotlib/blob/master/doc/users/style_sheets.rst">instructions here</a>). I submitted a PR to have FiveThirtyEight style included in Matplotlib, so now you can type <code>plt.style.use('fivethirtyeight')</code>! I also include the popular Bayesian Methods for Hackers color scheme, <code>plt.style.use('bmh')</code>. Give it a try!</p>
+<p> </p>

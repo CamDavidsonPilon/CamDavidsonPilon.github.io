@@ -1,0 +1,45 @@
+---
+layout: post
+title:  "Generating exponential survival data"
+date:   2017-11-12T16:14:09-05:00
+redirect_from:
+  - /blogs/napkin-folding/generating-exponential-survival-data
+---
+
+<p>Suppose we interested in generating exponential survival times with scale parameter \(\lambda\), and having \(\alpha\) probability of censorship, \(0 \le \alpha &lt; 1\). This is actually, at least from what I tried, a non-trivial problem. I've derived a few algorithms:</p>
+<h3>Algorithm 1</h3>
+<ol>
+<li> Generate \(T \sim \text{Exp}( \lambda )\). If \(\alpha = 0\), return \((T, 1)\). </li>
+<li> Solve \(\frac{  \lambda h }{ \exp (\lambda h) -1 } = \alpha \) for \(h\).</li>
+<li> Generate \(E \sim  \text{TruncExp}( \lambda, h )\), where \(\text{TruncExp}\) is the truncated exponential distribution with max value \(h\).</li>
+<li>\(C=(T+E)&lt;h\)</li>
+<li>\(T = \min ( h - E, T )\)</li>
+<li>return \((T,C)\)</li>
+</ol>
+<p>  Yes, it is actually that hard (unless I am missing something and there is a super simple solution).  Here's the Python:</p>
+<h3>Algorithm 2</h3>
+<meta charset="utf-8"/>
+<ol>
+<li>Generate \(T \sim \text{Exp}(\lambda)\). If \(\alpha = 0\), return \((T, 1)\). </li>
+<li>Generate \( T_c \sim \text{Exp}(\frac{\alpha \lambda}{1 - \alpha}) \)</li>
+<li>\(T = \min(T_c, T)\)</li>
+<li>\(C = (T &gt; T_c)\)</li>
+<li>return \( (T, C) \)</li>
+</ol>
+<h3>The long</h3>
+<p>Here's what doesn't work, which I rudely found out today (why? This fails independences assumptions when using Kaplan Meier)</p>
+<ol>
+<li>Generate exponentials,</li>
+<li>randomly pick \(\alpha\) of them, and scale their magnitude by a \(\text{Uni}(0,1)\)</li>
+</ol>
+<h4></h4>
+<h4>Details on Algorithm 1</h4>
+<p>Instead, I visualised the problem as a mini real-world situation. That is, given a randomly staggered birth and an individual having an exponential lifetime, at what time should I observe the individual so that there is an \(\alpha\) probability that I would have censored them (that is, they have not died yet). To make things mathematically easier, I assumed that staggered births also came from a independent and identical distribution as the lifetime distribution. Call the time before birth \(S\) and the lifetime of an individual \(L\) (so \(S\) and \(L\) are iid exponentials). I am curious about the time I should observe the individual, call this time \(h\), so that there is an \(\alpha\) probability they have not died yet. I also need that \(S&lt;h\), so that I at least see the birth of the individual. Thus, I need to solve:</p>
+<p>$$P( S+ L &gt; h | S &lt; h ) = \alpha$$</p>
+<p>for \(\alpha\). The left-hand-side involved lots of straightforward integrals, and actually reduced to the amazingly simple formula: <br/>$$\frac{ \lambda h }{ \exp (\lambda h) -1 }$$</p>
+<p>The right-hand side, as a function of \(h\), looks like this:</p>
+<p style="text-align: left;"><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/xe82f6ql.png?v=1510520010" style="float: none;"/></p>
+<p><br/> After solving for \(h\), the next step was simple simulation: generate \(S \;|\; S &lt; h\) and \(L\), and determine if witnessing the individual at time \(h\) would be a censorship or not. This last step was just some inequalities and algebra.</p>
+<h4>
+<br/>Details on Algorithm 2</h4>
+<p>This one is pretty simple: Suppose censorship times follow an exponential too, but what is the parameter? Well we want:<br/>$$ P( S &gt; L ) = \alpha $$<br/>Computing this integral and solving for \(\alpha\) implies that the correct parameter should be \(\frac{ \alpha \lambda } { 1 - \alpha}\).</p>

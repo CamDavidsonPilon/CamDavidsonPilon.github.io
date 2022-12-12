@@ -1,0 +1,79 @@
+---
+layout: post
+title:  "The Binary Problem and The Continuous Problem in A/B testing"
+date:   2017-01-09T09:43:24-05:00
+redirect_from:
+  - /blogs/napkin-folding/17543303-the-binary-problem-and-the-continuous-problem-in-a-b-testing
+---
+
+<h3>Introduction</h3>
+<p>I feel like there is a misconception in performing A/B tests. I've seen blogs, articles, etc. that show off the result of an A/B test, something like "converted X% better". But this is not what the A/B test was actually measuring: an A/B test is measuring <i>"which group is better"</i> (the binary problem), <b>not</b> <i>"how much better"</i> (the continuous problem).</p>
+<p>In practice, here's what happens: the tester waits until the A/B test is over (hence solving the binary problem), but now tries to solve the continuous problem, typically by using the estimate: $$ \frac{ \hat{p_B} - \hat{p_A} }{ \hat{p_A} } $$ This is a bad idea. It takes <i>orders of magnitude</i> more data to solve the continuous problem - the data you have is simply not enough. Tools like Optimizely are sensitive to the problem of trying to solve the continuous problem using too little data, and haven't really addressed it either. (On the other hand, I was happy to see RichRelevance understand this problem, I'll quote them later in this article). Likely most companies' internal experiment dashboard's have the same problem. This leads to hilarious headlines like:</p>
+<img class="display-image" src="//i.imgur.com/u31666y.png"/>
+<h3>A Solution</h3>
+<p>We'd like to use the binary solution attempt to solve the continuous problem. The first problem is that the estimate of relative increase, from above, has incredibly high variance: the estimate jumps around widely. For example, let's consider data from the following A/B test:</p>
+<div class="blog_table">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Total</th>
+<th>Conversions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Group A</td>
+<td>1000</td>
+<td>9</td>
+</tr>
+<tr>
+<td>Group B</td>
+<td>9000</td>
+<td>150</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>With this data we can solve the binary problem: there is 97% chance that group B's conversion rate is greater than group A's. <a href="/screencasts/#ab-testing-conversion-rates">The Bayesian A/B testing screencast explains how to calculate this</a>. So using the naive estimate above, the "lift" would be 85%. Here's the distribution of <i>possible</i> relative increases, computed using the posteriors of A and B:</p>
+. <img class="display-image" src="//i.imgur.com/oCs3n02.png"/>
+<p>This graph makes me lol. Experiment dashboard's will confidently proclaim an 85% lift and be done with it, but just look at the variability! We need to pick better estimate from this distribution.</p>
+<h4>Better Estimates of the Continuous Problem</h4>
+<p>What we need to do is pick a <i>conservative</i> estimate from this distribution:</p>
+<p> </p>
+<ul>
+<li>Choose the mean/expected value: This is actually a really bad choice. The distribution above is heavily skewed, so the mean is a poor representation of reality.</li>
+<li>Choose the median: The median, or 50-percentile, seems decent, but tends to overestimate the lift too.</li>
+<li>Choose the \(n&lt;50\) percentile: This is a better choice. It's conservative and robust. it balances our confidence in the solution to the continuous problem and not reporting overly ambitious (and hilarious) results. The good news is that whatever percentile we pick, we'll converge to the correct relative increase with enough data.</li>
+</ul>
+<p>Here are the different estimates on the same distribution:</p>
+<img class="display-image" src="//i.imgur.com/egxKLmg.png"/>
+<p>To quote a recent whitepaper from RichRelevance:</p>
+<blockquote>
+<p>Traditionally, we have examined statistical significance in testing using the null hypothesis method of test measurement—which can be misleading and cause erroneous decisions.For example, it can be tempting to interpret results as having strong confidence in lift for key metrics, when in reality, the null hypothesis method only measures the likelihood of a difference between the two treatments, not the degree of difference.</p>
+</blockquote>
+<p>❤️ this - they continue:</p>
+<blockquote>
+<p>The Bayesian method actually calculates the confidence of a specific lift, so the minimum lift from a test treatment is known.For this particular A/B test, we were able to conclude that RichRecs+ICS delivered 5% or greater lift at a 86% confidence using Bayesian analysis.</p>
+</blockquote>
+<p>What we can determine from this is that they chose the 14% percentile (100% - 86%), which showed a 5% increase (solution to the continuous problem). I've never met anyone from RichRelevance, nor have I used their software, but they are doing something right!</p>
+<h3>Update: Here's some more offenders</h3>
+<h4>Groove</h4>
+<img class="display-image" src="//i.imgur.com/mUEMMpfl.png"/>
+<p><a href="http://www.groovehq.com/blog/increasing-support-emails">Source</a>. The logic, from what they have said, is actually wrong too. As a user who got this far into the funnel (they clearly tried to add email forwarding) is already more likely to convert than the <i>average</i> user. Combined with the likely small sample size, we get some ridiculous 350% lift.</p>
+<h4>Optimizely</h4>
+<img class="display-image" src="//i.imgur.com/GOwObiCl.png"/>
+<p><a href="http://blog.optimizely.com/2014/04/07/ab-test-improve-lead-quality-b2b/">Source</a>.</p>
+<h4>Hubspot</h4>
+<img class="display-image" src="http://imgur.com/TvmQZHsl.png"/>
+<p><a href="http://blog.hubspot.com/marketing/call-to-action-ab-testing-ht">Source</a></p>
+<h4>Unbounce</h4>
+<img class="display-image" src="http://imgur.com/84kF08Tl.png"/>
+<p><a href="http://unbounce.com/a-b-testing/how-a-single-a-b-test-increased-conversions/">Source</a>. This is a terrible offender. They were kind enough to give us all the data too:</p>
+<a href="http://i.imgur.com/0RPfidX.png"><img class="display-image" src="//i.imgur.com/0RPfidXl.png"/></a>
+<p>Their arrows point to whats wrong. Incredibly small sample size. Total mixup of the binary problem vs. the continuous problem. The "probability of outperforming original" can only be determined using Bayesian A/B testing. I've tried a bunch of priors and could not get 95.2, so they are not using Bayesian methodology, so the label is wrong.</p>
+<!--3-->
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>

@@ -1,0 +1,35 @@
+---
+layout: post
+title:  "Percentile and Quantile Estimation of Big Data: The t-Digest"
+date:   2015-03-18T20:34:22-04:00
+redirect_from:
+  - /blogs/napkin-folding/19055451-percentile-and-quantile-estimation-of-big-data-the-t-digest
+---
+
+<p><span style="line-height: 1.5;">Suppose you are interested in the sample average of an array. </span><i style="line-height: 1.5;">No problem </i>you think, as you create a small function to sum the elements and divide by the total count.</p>
+<p>Next, suppose you are interested in the sample average of a dataset that exists on many computers. <i>No problem</i> you think, as you create a function that returns the sum of the elements and the count of the elements, and send this function to each computer, and divide the sum of all the sums by the sum of all the counts.</p>
+<p>Next, suppose you are interested in the sample median of that same distributed dataset. <em>No problem</em> you think, as you create a function that sorts the array and takes the middle element, and send this function to each computer, and - wait. That won't work. </p>
+<p>The problem is is that the median of median is not equal to the median. This is why many SQL engines do not support a MEDIAN function (which left many analysts scratching their heads). What's needed is an algorithm that can <em>approximate</em> the median, while still being space efficient. </p>
+<h2> Introducing the t-Digest</h2>
+<p>First published in 2013 by the uber-practical and uber-intelligent Ted Dunning, the t-Digest is a probabilistic data structure for estimating the median (and more generally any percentile) from either distributed data or streaming data. Internally, the data structure is a sparse representation of the cumulative distribution function. After ingesting data, the data structure has learned the "interesting" points of the CDF, called centroids. What do I mean by that? Consider the following very lopsided distribution:</p>
+<p><img src="https://cdn.shopify.com/s/files/1/0678/1739/files/njz2ecml.png?10029814312315264971"/></p>
+<p>(It's really a mixture of Normals). The data has empirical CDF: </p>
+<p><img src="https://cdn.shopify.com/s/files/1/0678/1739/files/JaVZZXVl.png?11764934684945596676"/></p>
+<p>The t-Digest will literally eat this dataset, and try to represent the "interesting" points of its cumulative distribution. We can plot the internal sparse representation of the CDF: </p>
+<p><img src="https://cdn.shopify.com/s/files/1/0678/1739/files/X6mJ3YVl.png?17530862796431017688"/></p>
+<p>The vertical lines denote where the digest thinks "interesting and relevant" centroids are. This is really neat. We can see the digest has only kept the parts of the CDF where the CDF is changing fastest. This makes sense: these are where quantities like the percentile are changing quickest. Flat portions of the CDF, like near x=3 and x=8, only need to be summarized by a few points. </p>
+<h2>Size Considerations</h2>
+<p>Running a small test locally, I streamed 8mb of pareto-distributed data into a t-Digest. The resulting size was 5kb, and I could estimate any percentile or quantile desired. Accuracy was on the order of 0.002%. </p>
+<h2>Associative and Commutative Properties of the t-Digest</h2>
+<p>So we can stream in data to the t-Digest, but how can we use this data structure for map-reduce? In the map stage, we can process data into the t-Digest sequentially, so we have N t-Digests in N computers. At the reduce stage, we can define an addition operation on two t-Digests as follows. Create a new t-Digest and treat the internal centroids of the two left-hand side digests as incoming data. The resulting t-Digest is a only slightly larger, but more accurate, t-Digest. Amazing: the t-Digest literally eats itself.</p>
+<h2>t-Digest in Python</h2>
+<p>Interested in the algorithm, but without any code to read (I can't yet read Ted's implementation in Java), I wrote a semi-efficient t-Digest in Python (with helpers from Cython). You can find it in the <a href="https://github.com/CamDavidsonPilon/tdigest">CamDavidsonPilon/tdigest</a> repo. There are some further optimizations to do, but it's probably efficient enough for most offline work! </p>
+<h2>Conclusion</h2>
+<p>I highly recommend Dunning's original paper on the t-Digest below - it's an easy read. Him and some other authors are constantly improving the data structure as well, see i<a href="https://github.com/tdunning/t-digest/issues/40">ssues here</a>. </p>
+<h2>References</h2>
+<ol>
+<li>Dunning, T. "<span>COMPUTING EXTREMELY ACCURATE QUANTILES USING </span><span>t</span><span>-DIGESTS". https://github.com/tdunning/t-digest/blob/master/docs/t-digest-paper/histo.pdf</span>
+</li>
+<li><a href="https://github.com/tdunning/t-digest"><span>Original t-Digest implementation</span></a></li>
+<li><a href="https://github.com/CamDavidsonPilon/tdigest"><span>Python t-Digest implementation</span></a></li>
+</ol>

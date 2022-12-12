@@ -1,0 +1,277 @@
+---
+layout: post
+title:  "Least Squares Regression with L1 Penalty"
+date:   2015-11-22T15:12:41-05:00
+redirect_from:
+  - /blogs/napkin-folding/79033923-least-squares-regression-with-l1-penalty
+---
+
+<p>I'd like to discuss and demonstrate a really cool idea in machine learning and statistics. It's a simple idea: adding a constraint to an optimization problem, specifically a constraint on the sum of learned parameters, can have huge impacts on your interpretation, robustness and sanity. I must first introduce the family of functions we will be discussing.</p>
+<h3>The L-norm family</h3>
+<p>The family of L-norm penalty functions, \(L_p:R^d \rightarrow R\), is defined: 
+
+$$ L_p( x ) = || x ||_p = \left( \sum_{i=1}^d |x_i|^p \right) ^{1/p} \;\: p&gt;0 $$ 
+
+For \(p=2\), this is the familiar Euclidean distance. The family of functions defined by \((L_p)^p\) are often used in machine learning literature. For example, one of my favourite ideas in regression and optimization is using an L-norm function in your optimization problem. For example, in linear regression one might use the following objective function: 
+
+$$ \; \min_w (Y - Xw)^{T}(Y-Xw) + \lambda ||w||_2^2 $$ 
+$$ = \min_w (Y - Xw)^{T}(Y-Xw) + \lambda w^Tw $$ 
+
+The above optimization problem is also known as ridge regression in literature. This is a well defined, convex, <i>differentiable</i> optimization problem even after including L2 function. The L2 function acts as a <i>penalizer</i>: \(w^Tw\) grows large as the weights \(w\) grow large, thus the minimization program tries to make \(w\) smaller. Hence why it is called a penalty function. Why is having smaller weights desirable? Smaller weights mean over-fitting is more difficult to achieve.</p>
+<h3>Issues with Ridge Regression</h3>
+<p>One major issue I have with ridge regression, including non-penalized least squares (which is ridge regression when \(\lambda=0\)), is that the solution will give non-zero weights to all variables, even variables known to be <b>completely independent</b> of the response variable! Admittedly the coefficient might be magnificently small, <b>it will never be zero</b>. Example (in Matlab):</p>
+<pre class="brush: python">&gt;&gt; y = normrnd(5,.1, 1,100);
+&gt;&gt; x =  normrnd(5,.1, 1,100);
+
+&gt;&gt; regress( y, [x', ones(100,1)] )
+ans 
+   = [-0.0439, 5.2328];
+</pre>
+<p>So least-squares has given a non-zero weighting to a completely-independent variable. Of course, one can perform statistical tests to determine whether the regression is significant, or examine the \(R^2\) to see whether the relationship is linearly-strong. But this is a simple 1-D case. When we are dealing with many variables, the techniques to determine significance are not so simple: one cannot be sure about the relationship between variables, so standard tests are much more complex. Furthermore, we would like a simple solution, that is, a regression result without too many variables. That way it is easier to <i>explain</i> the relevant variables in the model. (Imagine trying to explain to your boss that your analysis using least squares implies that there is a linear relationship between the stock price movements and this computer-generated random variable!) Even more disheartening: we can throw in as many independent variables as we like and still achieve a very high \(R^2\), see below:</p>
+<pre class="brush: python">R = []  
+y =  normrnd(5,.1, 1,100)';
+for i=1:5:95
+    x = normrnd(5,.1, i,100)'; #generate (i,100) random normal variables
+    [beta, b, r] = regress( y, [x, ones(100,1)] ); #regress on y
+    R(end+1) = 1 - std(r)/std(y); #calculate R^2 using the residuals, r
+end
+
+scatter( 1:5:95, R) #shown below.
+</pre>
+<p><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/R2noVariables.png?984064467887908665"/></p>
+<p>Wow. I am saddened about this. What if after regression we just removed all variables with a small coefficient? <a href="/web/20150811175355/http://stats.stackexchange.com/questions/32936/sparsity-by-discarding-least-squares-coefficient">This Cross-Validated answer</a> explains why this is a dangerous idea. What is needed is a new approach.</p>
+<h3>Least Squares Regression with L1 Penalty</h3>
+<p>We make a slight modification to the optimization problem above and big things happen. Instead of using an L2 penalization function, we instead use an L1. 
+
+$$ \; \min_w (Y - Xw)^T(Y-Xw) + \lambda ||w||_1 $$ 
+
+
+
+$$= \min_w (Y - Xw)^T(Y-Xw) + \lambda \sum_{i=1}^n | w_i | $$ 
+
+Immediately we lose the differentiability of the optimization function: the absolute values are non-differentiable. Thus we cannot solve the optimization problem using standard calculus techniques. What do we gain then? One can show that for some large enough \(\lambda\), the solution is a <i>sparse solution</i>. A sparse solution means a solution for \(w\) that has many zeros in it, effectively removing the corresponding variable from the system. There are then two immediate consequences:</p>
+<ol>
+<li>The system will give a coefficient of zero to non-relevant variables, instead of some insanely small coefficient. This means independent or near-independent variables will be discarded instead of included.</li>
+<li>It gives us the most important variables in the regression model! We can speak confidently that variable \(i\) has a strong connection with the response variable, \(Y\) .</li>
+</ol>
+<p>We can actually rewrite the above optimization program into a more understandable form. It can be show that the program is equivalent to: 
+
+$$\min_w (Y - Xw)^T(Y-Xw) \;\; \text{s.t}$$ 
+
+
+
+$$ \sum_{i=1}^n | w_i | \le 1/ \lambda $$ 
+
+So we constrain the sum of the weights. It is interesting to note that as \(\lambda \rightarrow 0\), we recover the standard Least-Squares solution. Using the figures below, we can try to visualize <i>why</i> the system gives a sparse solution. Consider a regression with two variables, and no linear intercept: 
+
+$$ \min_{w_1, w_2} F(w_1, w_2) + \lambda ||w ||_1$$ 
+
+where \(||w||_1 = ( |w_1| + |w_2| )\) and \(F\) is some quadratic function of \((w_1, w_2)\)(Recall the term \((Y-Xw)^{T}(Y-Xw)\) is quadratic in \(w\)). Visually, the two functions look like:</p>
+<p style="text-align: left;"><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/surfaces_grande.png?9325499824844129" style="float: none;"/></p>
+<p>The green surface is \( |w_1| + |w_2|\) and the gold surface is the quadratic \(F\). The bold curve represents the curve of intersection. The minimum of the optimization function will lie somewhere on the curve of intersection. If we examine the contour plot of the two functions, including the line of intersection, we see that the minimum does indeed lie on one of the two axes. Also note the sharp breaks in the line of intersection, hence our loss of ability to find the solution using calculus.</p>
+<h3><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/contours_grande.png?12509094581181634426"/></h3>
+<h3></h3>
+<h3>A worked example</h3>
+<h4>The dataset and results</h4>
+<p>Let's compare the coefficients of L1 versus unpenalized linear regression . I used the <a href="/web/20150811175355/http://people.sc.fsu.edu/~jburkardt/datasets/regression/x28.txt">Death Rate dataset</a>, which uses the following variables to predict regional <b>death rates </b> (emphasis added for effect):</p>
+<ul>
+<li>A1, the average annual precipitation;</li>
+<li>A2, the average January temperature;</li>
+<li>A3, the average July temperature;</li>
+<li>A4, the size of the population older than 65;</li>
+<li>A5, the number of members per household;</li>
+<li>A6, the number of years of schooling for persons over 22;</li>
+<li>A7, the number of households with fully equipped kitchens;</li>
+<li>A8, the population per square mile;</li>
+<li>A9, the size of the nonwhite population;</li>
+<li>A10, the number of office workers;</li>
+<li>A11, the number of families with an income less than $3000;</li>
+<li>A12, the hydrocarbon pollution index;</li>
+<li>A13, the nitric oxide pollution index;</li>
+<li>A14, the sulfur dioxide pollution index;</li>
+<li>A15, the degree of atmospheric moisture.</li>
+</ul>
+<p>After normalizing the data, we perform unpenalized linear regression and L1 linear regression for varying values of \(t = 1/\lambda\). Below are the coefficients for each regression:</p>
+<table border="1" class="display-table">
+<tbody>
+<tr>
+<th>Variable</th>
+<th>unpenalized LR</th>
+<th>L1-penalty, \(t=0.2\)</th>
+<th>L1-penalty, \(t=1\)</th>
+<th>L1-penalty, \(t=1.5\)</th>
+<th>L1-penalty, \(t=2\)</th>
+<th>L1-penalty, \(t=3\)</th>
+<th>L1-penalty, \(t=10\)</th>
+</tr>
+<tr>
+<td>A1</td>
+<td>0.3326</td>
+<td>0</td>
+<td>0.1483</td>
+<td>0.1977</td>
+<td>0.2438</td>
+<td>0.3080</td>
+<td>0.3326</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>-0.4192</td>
+<td>0</td>
+<td>-0.0688</td>
+<td>-0.2106</td>
+<td>-0.2824</td>
+<td>-0.3498</td>
+<td>-0.4192</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>-0.2171</td>
+<td>0</td>
+<td>0</td>
+<td>-0.0230</td>
+<td>-0.1214</td>
+<td>-0.1787</td>
+<td>-0.2171</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>-0.3306</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>-0.0233</td>
+<td>-0.1770</td>
+<td>-0.3306</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>-0.2510</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>-0.0507</td>
+<td>-0.1614</td>
+<td>-0.2510</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>-0.3295</td>
+<td>-0.0161</td>
+<td>-0.1731</td>
+<td>-0.1721</td>
+<td>-0.1821</td>
+<td>-0.2361</td>
+<td>-0.3295</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>-0.0947</td>
+<td>0</td>
+<td>0</td>
+<td>-0.0436</td>
+<td>-0.0903</td>
+<td>-0.1156</td>
+<td>-0.0947</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>0.2347</td>
+<td>0</td>
+<td>0.0235</td>
+<td>0.1388</td>
+<td>0.1898</td>
+<td>0.2107</td>
+<td>0.2347</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>0.5066</td>
+<td>0.1839</td>
+<td>0.4030</td>
+<td>0.5087</td>
+<td>0.5956</td>
+<td>0.5588</td>
+<td>0.5066</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>0.0389</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>-0.0053</td>
+<td>-0.0017</td>
+<td>0.0389</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>0.0179</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0.0179</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>-1.3145</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>-0.2539</td>
+<td>-1.3145</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>1.3909</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0.2789</td>
+<td>1.3909</td>
+</tr>
+<tr>
+<td>A14</td>
+<td>-0.0351</td>
+<td>0</td>
+<td>0.1833</td>
+<td>0.1965</td>
+<td>0.1910</td>
+<td>0.1418</td>
+<td>-0.0351</td>
+</tr>
+<tr>
+<td>A15</td>
+<td>0.0468</td>
+<td>0</td>
+<td>0</td>
+<td>0.0088</td>
+<td>0.0241</td>
+<td>0.0275</td>
+<td>0.0468</td>
+</tr>
+</tbody>
+</table>
+<br/>
+<h4>Analysis</h4>
+<p>Note how as we increase \(t\), we arrive at the unpenalized least squares solution. This is because we have given so much <i>wiggle </i> room to what the sum of absolute values can be that it is not longer a constraint on the problem. Based on the above results, what can we say about the the coefficients? We can see that there are a handful of variables that are not important in the regression. For example in the \(t=1\) column, because the respective coefficients are zero we see that the average July temperature, percent of pop. &gt; 65yo, percent of non-white families and relative humidity were chosen <b>not</b> to be included in the regression, as they likely contribute nothing (more accurately: some other variable explains the response variable, or itself, better. For example, variables A6 and A7 are highly correlated, thus why included both in the regression if having either explains most the the pair's contribution to the death rate). It's useful to really scale back \(t\), which I did by setting \(t = 0.2\), even if it destroys your predictive power, to see what remains. What does remain should therefore be really important: schooling for persons over 22 and percent of non-white families respectively. Can we try to explain why?</p>
+<h3><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/DeathScatter_grande.png?5232208002476449414"/></h3>
+<h3>Back to L1 Penalties</h3>
+<p>The next question is how does one compute the solution to the above L1 penalized optimization problem? There are three main algorithms that achieve this: Least Angle Regression, LASSO, and stage-wise progression. All have there pros and cons, though for first timers I would suggest LARS (a good MATLAB implementation is available online). Secondly, how does one choose a good \(t\)? Cross validation is a good start. There is no hard set rule, as it is a function of the number of variables in your regression.</p>
+<p>We saw previously that by increasing the number of variables in the regression, even if they are independent of the response, we can achieve a high \(R^2\) with linear regression. What happens if we perform the same test with an L1 penalizer? Well I performed the same test (for science!) and the results are charted below.</p>
+<p style="text-align: left;"><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/L1Scatter.png?14741760235623230617" style="float: none;"/></p>
+<p>Fuck yea.</p>
+<h3>Conclusion</h3>
+<p>Often we want our solution to be sparse. Situations may include:</p>
+<ul>
+<li>Suppose you have a basket of financial assets, and you wish to hedge (or replicate) one of them against the others. Normally one might use least-squares to find a really good hedge. But if your basket is large, you will have to trade all of them, even the assets that are highly uncorrelated. This induces more risk and higher transaction costs in practice. Instead, one can use an L1 penalizer with least squares to find the <b>appropriate sub-basket</b> of assets that still gives a really good hedge, and reduces the number of assets to trade.</li>
+</ul>
+<p>L1 penalizations are a great way to both better explain your regression results and find important (i.e. abandon non-relevant) features. I have been having a lot of fun playing around with least squares with an L1 penalty. Extensions of this idea to <a href="/web/20150811175355/http://camdp.com/blogs/kernelized-and-supervised-principle-component-anal">PCA</a> means that we can find a <i>sparse</i> solution to that to, something I am very interested in.</p>
+<h3>References</h3>
+<ul>
+<li>Tibshirani, Robert. "Regression shrinkage and selection via the lasso." Journal of the Royal Statistical Society. Series B (Methodological) (1996): 267-288.</li>
+</ul>
