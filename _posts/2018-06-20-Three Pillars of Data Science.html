@@ -1,0 +1,48 @@
+
+---
+layout: post
+title:  "Three Pillars of Data Science"
+date:   2018-06-20T14:47:00-04:00
+---
+
+<meta charset="utf-8"/>
+<h2>Introduction</h2>
+<p>The idea of grouping data science tasks has been bouncing around in my head for the past six or so months, and recently I came across a paper by Miguel Hernán¹ that summarised the ideas nicely. In fact, the metaphorical "pillars" idea came from his paper. This blog article is a combination of his ideas and my own. With that, I present what I (and he) consider the three pillars of data science. </p>
+<h2></h2>
+<h2>Description</h2>
+<p>Description is what I feel the majority of data scientists in industry focus on. This could be something as simple as mean, a conversion rate, a time series, etc. or something more advanced like a statistical test. Description also includes data mining algorithms like clustering and association rules. </p>
+<p>This is a well explored area, thanks to the 20th century focus on descriptive statistics and methods. This was the result of a few simultaneous conditions:</p>
+<div>
+<ol>
+<li>Due to the lack of computers and often inability to share datasets, statisticians and scientists needed ways to summarise datasets. </li>
+<li>Hand in hand with advances in healthcare and agriculture were ways to understand the effectiveness of these advancements. With not only finite but small sample sizes, and lives on the line, it was of paramount of importance to measure the variance and potential errors.</li>
+<li>Towards the end of the century, when computers become more available, new methods become available too: GLMs, bootstrapping, data mining. </li>
+</ol>
+</div>
+<div style="padding-left: 30px;"></div>
+<p>While this is what I feel is the most common pillar in industry, it's not talked much about in the community. I wonder if is this because it's due to the classical feel of these techniques? Or perhaps it's what I would prefer but do not believe, is that they are so well studied and understand that we need not talk about them. (Why do I not believe this? Take a look at Andrew Gelman's terrific blog almost any time he posts an article. It's always full of mistakes other<span> </span><em>researchers</em><span> </span>make, let alone people in industry). No, most of the community's attention is given to the next pillar: prediction.  </p>
+<h2>Prediction</h2>
+<p>We spend most of our time thinking, implementing, watching and talking about prediction. Many times a<span> </span><em>day</em>, a new ML prediction algorithm or article will surface on Hacker News. Contrast where we are today with the previous century: we have lots of compute power, available datasets and accessible technology for prediction. Prediction, in some cases, has been widely profitable for companies. (Not to say description hasn't either. Pharma companies rely on descriptive methods to validate their work. Banks and insurance companies, too, rely on descriptive methods to control their business investments - no other technique could help.)  I say some cases, because I do see a lot of excess application of prediction, often where description (or the third pillar) would be sufficient. </p>
+<p>The next pillar is the least talked about. Surprisingly too, considering the importance of it. </p>
+<h2>Causal Inference</h2>
+<p>Sometimes I feel ashamed to admit how ignorant I really am. To be transparent, I didn't learn much causal inference (or care) until about nine months ago. And even then, it was just fumbling around in a dark room of ideas. Slowly, however, I picked up the pieces and <strong>learned what to learn</strong>. So why should a data scientist know about causal inference?  </p>
+<p>From my experience, a data scientist gets asked questions that can only be answered with a causal inference lens. Questions like, to use my company Shopify as an example:</p>
+<ol>
+<li>What is the impact on sales of merchants who adopt our point-of-sale system?</li>
+<li>What is causing merchants to leave our platform?</li>
+<li>What is the effect of server latency on checkouts? </li>
+</ol>
+<p>These questions, because of the complex nature of the system, cannot be answered with traditional summary statistics. Confounders abound, and populations are biased. We require new tools and ideas that come from causal inference. </p>
+<p>Randomised control trials (RCTs) are very common in tech companies. This classical technique is actually generalised in causal inference frameworks. Beyond this, as a data scientist working in industry, you'll have a new perspective on what your observational data can (and cannot!) deliver. </p>
+<p>What I find worrying is that, as a community, we are not talking about causal inference enough. This could have some serious harm. If practitioners in industry aren't aware of techniques from causal inference, they will use the wrong tool and could come to the wrong conclusion. For example, both Simpson's Paradox and Lord's Paradox, two very common phenomena, are easy explainable in a causal framework, but without this framework, people can make disastrous and harmful conclusions. For example, in the low birthweight paradox (see paper below), without causal inference there is the potential to conclude that smoking <em>helps</em> low birthweight infants! Furthermore, I rarely see school programs or bootcamps in data science teaching causal inference. It's almost exclusively prediction and technology! </p>
+<p>So, rather than describe the slow and meandering way I discovered causal inference, I'll post some links below to give you a head start (probably read these in order):</p>
+<ul>
+<li><a href="https://medium.com/causal-data-science/understanding-bias-a-pre-requisite-for-trustworthy-results-ee590b75b1be" rel="noopener noreferrer" target="_blank">Understanding Bias</a></li>
+<li><a href="http://www.dagitty.net/learn/graphs/table2-fallacy.html">Table 2 Fallacy</a></li>
+<li><a href="https://academic.oup.com/aje/article/164/11/1115/61454" rel="noopener noreferrer" target="_blank">The "Birthweight Paradox" Uncovered?</a></li>
+<li>Causal Inference in Statistics by Judea Pearl</li>
+</ul>
+<p>There's so much more, but at least this gives you a place to <strong>learn what to learn</strong>﻿.</p>
+<h2>Conclusion</h2>
+<p>This article will likely evolve over time, as I discover more and more about the boundaries of these three pillars. But I hope the reader recognises a pillar they are lacking in (for me it was causal inference). Based on this construction, I do expect there to be huge potential for practitioners of causal inference (ex: econometricians and epidemiologists come to mind) in teaching data science. </p>
+<p>¹ <a href="https://arxiv.org/abs/1804.10846"><span>Data science is science's second chance to get causal inference right: A classification of data science tasks</span></a></p>

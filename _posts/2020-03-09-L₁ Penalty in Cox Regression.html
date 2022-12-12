@@ -1,0 +1,60 @@
+
+---
+layout: post
+title:  "L₁ Penalty in Cox Regression"
+date:   2020-03-09T09:32:00-04:00
+---
+
+<meta charset="utf-8"/>
+<p>In the 00's, L1 penalties were all the rage in statistics and machine learning. Since they induced sparsity in fitted parameters, they were used as a variable selection method. Today, with some advanced models having tens of <em>billions</em> of parameters, sparsity isn't as useful, and the L1 penalty has dropped out of fashion.</p>
+<p>However, most teams aren't using billion parameter models, and smart data scientists work with simple models initially. Below is how we implemented an L1 penalty in the Cox regression model.</p>
+<h2>Smoothing the absolute value</h2>
+<p>The log-likelihood we wish to maximize looks like:</p>
+<p>$$ll^*(\theta, x) = \sum_i^N ll(\theta, x_i) - \lambda||\theta||_1$$</p>
+<p>where \(||\cdot ||_1\) is the sum of absolute values of the parameter vector \(\theta\). With L2 penalties, the penalty term is differentiable, and we can easily find the gradient w.r.t. the parameter vector, which enables us to use iterative solvers to solve this optimization problem. However, when our penalty is L1, we don't have a smooth derivative.</p>
+<p>We solve this by replacing \(||\cdot ||_1\) with a smooth version:</p>
+<p>$$\text{softabs}(\theta, a) = \frac{1}{a} \log(1 + \exp(-a\theta)) + \frac{1}{a}\log(1 + \exp(a\theta))$$</p>
+<p>As \(a→\inf\), this converges to the absolute value of \(\theta\). This smooth absolute value is differentiable everywhere too. With that in mind, we can use our iterative solvers again, and increase \(a\) each iteration. I don't think there is any simple solution to choose \(a\), but I've found that increasing it exponentially works well.</p>
+<h2>Elastic net penalty</h2>
+<p>We can combine this L1 penalty with an L2 penalty to get the elastic-net penalty, introduce a new parameter \(\rho\) to control weighting between the two:</p>
+<p>$$ll^*(\theta, x, a) = \sum_i^N ll(\theta, x_i) - \lambda(\rho||\theta||_2^2 + (1-\rho) \text{softabs}(\theta, a))$$</p>
+<p>And remember: cool kids don't take derivatives by hand! Why waste time and make mistakes trying to compute the first and second derivative of this penalty - let <a href="https://github.com/HIPS/autograd">autograd</a> do it!</p>
+<pre><code>from autograd import elementwise_grad
+from autograd import numpy as anp
+
+
+def soft_abs(x, a):
+    return 1 / a * (anp.logaddexp(0, -a * x) + anp.logaddexp(0, a * x))
+
+def penalizer(beta, a, lambda_, l1_ratio):<br/>    return lambda_ * (l1_ratio * soft_abs(beta, a).sum() + (1 - l1_ratio) * (beta ** 2).sum())    
+
+d_penalizer = elementwise_grad(penalizer)
+dd_penalizer = elementwise_grad(elementwise_grad(penalizer)
+
+i = 0
+while converging:
+    i += 1
+    
+    h, g, ll = get_gradients(X, beta)
+
+    ll -= penalizer(beta, 1.3 ** i, 0.1, 0.5)
+    g -= d_penalizer(beta, 1.3 ** i, 0.1, 0.5)
+    h[np.diag_indices(d)] -= dd_penalizer(beta, 1.3 ** i, 0.1, 0.5)
+
+    # update beta and converging logic! Not shown here.
+</code></pre>
+<h2>Example in Cox model</h2>
+<p>In <a href="https://lifelines.readthedocs.io/en/latest/">lifelines</a> 0.24+, we introduced the L1 penalty for Cox models. We can visualize the sparsity effect of the L1 penalty as we increase the <code>penalizer</code> term:</p>
+<pre><code>from lifelines import CoxPHFitter
+from lifelines.datasets import load_rossi
+
+rossi = load_rossi()
+
+results = {}
+for p in np.linspace(0.001, 0.2, 40):
+    cph = CoxPHFitter(l1_ratio=1., penalizer=p).fit(rossi, "week", "arrest")
+    results[p] = cph.params_
+
+pd.DataFrame(results).T.plot()
+</code></pre>
+<p style="text-align: left;"><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2020-03-08_at_10.58.02_AM.png?v=1583760550" style="float: none;"/></p>

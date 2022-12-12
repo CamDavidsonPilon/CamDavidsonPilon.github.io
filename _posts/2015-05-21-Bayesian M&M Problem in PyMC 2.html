@@ -1,0 +1,56 @@
+
+---
+layout: post
+title:  "Bayesian M&M Problem in PyMC 2"
+date:   2015-05-21T21:37:00-04:00
+---
+
+<p>This Bayesian problem is from Allen Downey's <a href="http://greenteapress.com/thinkbayes/html/thinkbayes002.html#toc12"><em>Think Bayes</em> book</a>. I'll quote the problem here: </p>
+<meta charset="utf-8"/>
+<div style="padding-left: 30px;">M&amp;M’s are small candy-coated chocolates that come in a variety of colors. Mars, Inc., which makes M&amp;M’s, changes the mixture of colors from time to time.<a name="@default32"></a>
+</div>
+<div style="padding-left: 30px;"></div>
+<div style="padding-left: 30px;">In 1995, they introduced blue M&amp;M’s. Before then, the color mix in a bag of plain M&amp;M’s was 30% Brown, 20% Yellow, 20% Red, 10% Green, 10% Orange, 10% Tan. Afterward it was 24% Blue , 20% Green, 16% Orange, 14% Yellow, 13% Red, 13% Brown.</div>
+<div style="padding-left: 30px;"></div>
+<div style="padding-left: 30px;">Suppose a friend of mine has two bags of M&amp;M’s, and he tells me that one is from 1994 and one from 1996. He won’t tell me which is which, but he gives me one M&amp;M from each bag. One is yellow and one is green. What is the probability that the yellow one came from the 1994 bag?</div>
+<p> </p>
+<p>This is a very simple Bayesian problem, <em>on paper</em>! See Allen's book for the solution (link above). What if we wanted to use PyMC to solve it? Below is the solution (originally from <a href="http://stats.stackexchange.com/questions/146599/help-setting-up-pymc-to-solve-this-problem-relating-to-distribution-of-colors-in/146716#146716">CrossValidated</a>). </p>
+<h4 id="please-use-with-pymc-2-3-2"><span style="color: #000000;">Caution: Please use with PyMC 2.3.2</span></h4>
+<p><span style="color: #000000;">It looks like there is a bug in 2.3.4 (the most recent version) that is causing the wrong inference. This took me a while to discover, but it was solved when I downgraded to PyMC 2.3.2.</span></p>
+<h2 id="model-">Model:</h2>
+<pre><code>import pymc as pm
+
+p = [
+ #brown, yellow, red, green, orange, tan, blue
+ [.3,  .2,  .2,  .1, .1,  .1, .0 ], # 1994 bag
+ [.13, .14, .13, .2, .16, .0, .24]  # 1996 bag
+]
+
+
+bag = pm.Categorical('which_bag', [0.5, 0.5]) # prior on bag selected
+
+@pm.deterministic
+def first_bag_selection(p=p, bag=bag):
+    return p[bag]
+
+@pm.deterministic
+def second_bag_selection(p=p, bag=bag):
+    return p[1-bag]
+
+# observe yellow in bag 1
+obs_1 = pm.Categorical('bag_1', first_bag_selection, value=1, observed=True)
+
+#observe green in bag 2
+obs_2 = pm.Categorical('bag_2', second_bag_selection, value=3, observed=True)
+</code></pre>
+<h2 id="inference">Inference</h2>
+<pre><code>mcmc = pm.MCMC([bag, p, first_bag_selection, second_bag_selection, obs_1, obs_2])
+mcmc.sample(15000,3000)
+
+bag_trace = mcmc.trace('which_bag')[:]
+
+
+# what is the probability the bag chosen is from 1996?
+print (bag_trace == 1).sum()*1./bag_trace.shape[0]
+# should be about .26
+</code></pre>

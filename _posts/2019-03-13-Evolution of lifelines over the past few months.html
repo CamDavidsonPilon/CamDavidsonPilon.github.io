@@ -1,0 +1,62 @@
+
+---
+layout: post
+title:  "Evolution of lifelines over the past few months"
+date:   2019-03-13T16:20:00-04:00
+---
+
+<blockquote>
+<p>TLDR: upgrade lifelines for lots of improvements</p>
+<p><code>pip install -U lifelines</code></p>
+</blockquote>
+<p>During my time off, I’ve spent a lot of time improving my side projects so I’m at least <em>kinda</em> proud of them. I think lifelines, my survival analysis library, is in that spot. I’m actually kinda proud of it now.</p>
+<p>A lot has changed in lifelines in the past few months, and in this post I want to mention some of the biggest additions and the stories behind them.</p>
+<h2 id="performance-improvements-to-cox-model">Performance improvements to Cox model</h2>
+<p>The Cox proportional hazard model is the workhorse of survival analysis. Almost all papers, unless good reason not to, use the Cox model. This was one of the first regression models added to lifelines, but it has always been too slow. It’s implemented in Numpy, but there was a tricky <code>for</code> loop still in Python. I had ideas on how to turn that loop into a vectorized Numpy operation of matrix products, but there would have been an intermediate variable that created a <code>d x d x p</code> tensor, where <code>d</code> is the number of independent covariates and <code>p</code> is the size of some subset of subjects (at worst, p could be equal to the number of subjects). This will quickly explode the amount of memory required and hence performance would degrade.</p>
+<p>One night, on Twitter, I noticed some posts about how to use <code>einsum</code> in PyTorch and Numpy. I had previously heard of it, but didn’t think it was something that was implemented in Numpy nor did I think it was something I could use. Turns out, <code>einsum</code> is a way to do matrix multiplication <em>without</em> intermediate variables! How? Since a product of matrices is a just multiplications and sums, one can declaratively define what the end product should look like and the internals of <code>einsum</code> will compute the intermediate operations at the C layer (I’m simplifying and my own understanding of this is shaky). Suffice to say, after racking my brain and lots of trial and error with <code>einsum</code>, I could replace the tricky Python <code>for</code> loop with <code>einsum</code>! This resulted in a 3x performance increase. However, what I've gained in performance, I've lost in some readability of my code. I’ve put some references to <code>einsum</code> in the bottom of this article.</p>
+<p>The second significant improvement to the performance of the Cox model is using a meta-algorithm to select the fastest algorithm. There are two ways to compute the likelihood, and the performance of each is highly dependent on a few characteristics of the dataset, notably how many ties are in the dataset. After running some tests, I noticed that the delineation of when one was faster than the other was not clear, so a heuristic like <code>if num_ties &gt; 10:</code> would not be very effective. What I did instead was to generate hundreds of artificial dataset of varying ties and varying size, and measured the timing of both algorithms. I then fit a linear model to the <em>ratio</em> of the times, conditioned on the ties and size (and their interaction). It was a surprisingly good fit! So now in lifelines, at runtime, I compute some statistics about the incoming dataset, plug these values into a fitted linear model, and the result is the predicted ratio of timings between the two algorithms. I then choose which algorithm would be faster and continue on. The prediction is super fast (it’s a linear model after all), so there are no performance hits there. With this meta-algorithm, the lifelines Cox implementation is up to 3x faster for some datasets. I wrote up a full summary of the idea in a previous blog post <a href="https://dataorigami.net/blogs/napkin-folding/using-statistics-to-make-statistical-computations-faster">[2]</a>.</p>
+<p>Overall, the Cox model is now 10x faster than it was a few months ago. (Also, I only mention it here, but the Aalen Additive model is like 50x times faster, but most of those speed improvements where replacing Pandas with NumPy in critical points.)</p>
+<h2 id="adding-residuals-to-cox-regression">Adding residuals to Cox regression</h2>
+<p>One large gap in lifelines was checking the proportional hazards assumption, which is critical for any kind of inference-focused modeling (it matters less for prediction tasks). The author of the popular R survival library, Terry Therneau, has made massive contributions to survival analysis techniques, including a statistical test for non-proportionality. This test relies on an important residual of the Cox regression. While implementing this statistical test in lifelines, I realized there was a more general solution for handle <em>all</em> residuals, so I added functionality to compute the most common residuals.</p>
+<p>These additions enabled a new, very user friendly function, <code>check_assumptions</code>, which prints out potential proportionality violations in human readable format and offers advice on how to fix it. I also introduced residuals plots:</p>
+<p style="text-align: left;"><img alt="" height="309" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-03-13_at_3.12.05_PM.png?v=1552507010" style="float: none; display: block; margin-left: auto; margin-right: auto;" width="462"/></p>
+<h2 id="leaning-hard-on-autograd">Leaning hard on <em>autograd</em>
+</h2>
+<p>I think too many people are focused on deep learning. There, I said it, and probably you agree. However, some really cool technologies are falling out of that area that others can use. One of them is libraries that implement <em>automatic differentiation, </em>aka<em> autodiff</em>. This is like the holy grail for computational statisticians. Let me quickly explain why: given an arbitrary numerical function, you can automatically compute its exact gradient at any (valid) point. No rounding errors. No restrictions on the function. Just gradients. To quote directly from <a href="https://justindomke.wordpress.com/2009/02/17/automatic-differentiation-the-most-criminally-underused-tool-in-the-potential-machine-learning-toolbox/">[1]</a>:</p>
+<meta charset="utf-8"/>
+<p>/beginquote</p>
+<p>Q: What’s the difference between autodiff and symbolic diff?</p>
+<p>R: They are totally different. The biggest difference is that autodiff can differentiate algorithms, not just expressions. Consider the following code:</p>
+<pre><code>
+  function f(x)
+    y = x; 
+    for i=1…100 
+      y = sin(x+y); 
+    return y 
+</code></pre>
+<p>Automatic differentiation can differentiate that, easily, in the same time as the original code. Symbolic differentiation would lead to a huge expression that would take much more time to compute.</p>
+<p>Q: What about non-differentiable functions?</p>
+<p>R: No problem, as long as the function is differentiable at the place you try to compute the gradient.</p>
+<p>/endquote</p>
+<p>So why am I so excited about this? I suffered through a week of frustrations and headaches trying to implement a log-normal survival model by hand. You can see my frustration here <a href="https://github.com/CamDavidsonPilon/lifelines/issues/622">[3]</a>. Also, my second-derivative calculations were abysmal, which meant we would be computing unreliable confidence intervals. The whole thing made me depressed. I was pointed to the Python library <em>autograd</em> <a href="https://github.com/HIPS/autograd/tree/master/autograd">[4]</a>, and after some wrestling, it was like a beam of heaven shown down on me. Computing gradients with autograd is easy, computing second-derivatives is easy, and performance is near identical. I imagined future generalizations and abstractions, and this has radically simplified my code base. One cool idea is that since we know the second derivative exactly, we can compute the variance matrix of the fitted parameters exactly, and we can use the <a href="https://en.wikipedia.org/wiki/Delta_method">delta method</a> (and autograd) to compute variances of arbitrary functions of those fitted parameters. Here are two worked examples of the cool things you can do in lifelines now:</p>
+<ol type="1">
+<li><a href="https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Piecewise%20Exponential%20Models%20and%20Creating%20Custom%20Models.html">Creating custom survival models</a></li>
+<li><a href="https://lifelines.readthedocs.io/en/latest/jupyter_notebooks/Modelling%20time-lagged%20conversion%20rates.html">Cure models</a></li>
+</ol>
+<p>Autograd also enabled lifelines to implement accelerated failure time models, so users now have three new regression models to play with. I’ve been so happy with autograd that I’ve converted parts of my other Python library, lifetimes, to use it as well.</p>
+<h2 id="docs">Docs!</h2>
+<p>I’ve given the lifelines <a href="https://lifelines.readthedocs.io/en/latest/" rel="noopener noreferrer" target="_blank">docs</a> a serious facelift, probably doubled the amount of content, and edited large parts of it. Overall, I am much happier with the docs now. One addition I made was adding tracking of visitors’ searches on the docs site. This gives me some idea of where users might be confused, or where current docs structure is insufficient.</p>
+<p style="text-align: left;"><img alt="" height="395" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2019-03-13_at_2.59.22_PM.png?v=1552507030" style="display: block; margin-left: auto; margin-right: auto;" width="360"/></p>
+<meta charset="utf-8"/>
+<h2 id="docs">Conclusion</h2>
+<p>It's been a productive few months, and I think lifelines is in a good state. More of my attention now is on lifetimes (a new version was just released, by the way) and some other topics. Hope you enjoy lifelines! </p>
+<h3 id="einsum-tutorials">Einsum tutorials</h3>
+<ul>
+<li><a href="https://obilaniu6266h16.wordpress.com/2016/02/04/einstein-summation-in-numpy/">https://obilaniu6266h16.wordpress.com/2016/02/04/einstein-summation-in-numpy/</a></li>
+<li><a href="https://rockt.github.io/2018/04/30/einsum">https://rockt.github.io/2018/04/30/einsum</a></li>
+</ul>
+<h3>References</h3>
+<p>[1] <a href="https://justindomke.wordpress.com/2009/02/17/automatic-differentiation-the-most-criminally-underused-tool-in-the-potential-machine-learning-toolbox/">https://justindomke.wordpress.com/2009/02/17/automatic-differentiation-the-most-criminally-underused-tool-in-the-potential-machine-learning-toolbox/</a></p>
+<p>[2] <a href="https://dataorigami.net/blogs/napkin-folding/using-statistics-to-make-statistical-computations-faster">https://dataorigami.net/blogs/napkin-folding/using-statistics-to-make-statistical-computations-faster</a></p>
+<p>[3] <a href="https://github.com/CamDavidsonPilon/lifelines/issues/622">https://github.com/CamDavidsonPilon/lifelines/issues/622</a></p>
+<p>[4] <a href="https://github.com/HIPS/autograd/tree/master/autograd">https://github.com/HIPS/autograd/tree/master/autograd</a></p>

@@ -1,0 +1,18 @@
+
+---
+layout: post
+title:  "How can I use non-constructive proofs in data analysis?"
+date:   2015-08-09T15:15:00-04:00
+---
+
+<p>In mathematics, there are two classes of proof techniques: <strong>constructive </strong>and <strong>non-</strong><strong>constructive</strong><strong>. </strong>Constructive proofs will demonstrate how to build the object required. Its construction proves its existence, hence you are done. An example of this is proving that prime numbers are infinite using Euclid's argument: to find a prime number, you multiply together all the prime numbers seen thus far and add 1. </p>
+<p>On the other hand, a non-constructive proof does not detail how to build the object, just states that it must exist. Often this is done by finding a proof by contradiction, but some interesting proofs use probability theory. For example, if I'm interested in showing that there exists an object with some property less than 0, then an argument of the form "the expected value of this property is 0, and if I know there is an object with property more than 0, there must be an object with property less than 0, too". I didn't find that specific object, but I determined it must exist. </p>
+<meta charset="utf-8"/>
+<h3>What does this have to do with data analysis?</h3>
+<p>There is an interesting trend occurring in data analysis that is analogous to a non-constructive proof. The author won't find the object desired, but will state, statistically, that it does exist. Sound odd? </p>
+<p>Suppose it was early 2015, and I was interested in analyzing the Billboard's 2015 Song of the Summer. I might ask, "has the Song of the Summer been released yet?" By analyzing <em>when</em> the winning song was released in previous years, I can get a distribution of when this year's Song of the Summer might be released. If I'm past the majority of previous dates, then I can statistically conclude that 2015's Song of the Summer exists. I haven't shown <em>what</em> the song of the summer is, just that it exists. </p>
+<p>In fact, this is what FiveThirtyEight did this year: they suggested that on May 5th, <a href="http://fivethirtyeight.com/datalab/theres-a-good-chance-youve-already-heard-this-years-song-of-the-summer/">you have probably already heard</a> the 2015 Song of the Summer. They didn't guess which song, just that it existed. </p>
+<p>I find this to be a really powerful technique. By showing something exists, it can narrow down your search significantly. Suppose you and a friend were betting on what movie will win the Best Picture Oscar. You could probably do quite well by betting on all movies made after October, and nothing before. This is because the Oscar winner often is released (exists) after October. </p>
+<p>Another extension, from a decision maker's perspective, is to understand when something should exist, and place yourself there. For example, good luck to the artist who hopes to achieve Song of the Summer with a late May release! Similar ideas apply to presidential elections (when should a candidate enter the nominee race to maximize chances of being president?) and theatrical releases hoping to win Oscars. </p>
+<p>Any other applications? This feels like one of those tricks that is not generally applicable, but very powerful in a some situations. Leave other ideas in the comments! </p>
+<p> </p>

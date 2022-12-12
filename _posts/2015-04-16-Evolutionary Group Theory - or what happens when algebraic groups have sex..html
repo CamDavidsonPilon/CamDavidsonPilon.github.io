@@ -1,0 +1,122 @@
+
+---
+layout: post
+title:  "Evolutionary Group Theory - or what happens when algebraic groups have sex."
+date:   2015-04-16T20:29:00-04:00
+---
+
+<div>And now for something totally different. This is not data related. It's a paper I wrote about an intersection between group theory and evolutionary dynamics. Basically, what happens when groups have sex. Interested? Read on!</div>
+<div> </div>
+<div>TLDR: You can find analogous group theory axioms in dynamical systems.</div>
+<div></div>
+<div></div>
+<div></div>
+<div id="header">
+<h1 class="title">Population Dynamics of Algebraic Groups</h1>
+</div>
+<p>We construct a dynamical population whose individuals are assigned elements from an algebraic group <span class="math">\(G\)</span> and subject them to sexual reproduction. We investigate the relationship between the dynamical system and the underlying group and present three dynamical properties equivalent to the standard group properties.</p>
+<h1 id="introduction">Introduction</h1>
+<p>Consider a sufficiently large population of <span class="math">\(N\)</span> individuals. Sexual reproduction between individuals is a binary action, that is, sex involves two individuals. An interesting assumption is to consider if the population consists of individuals from an algebraic group. Recall the definition of a group <span class="citation"></span>: A set, <span class="math">\(G\)</span>, and binary operator <span class="math">\(\ast\)</span> is called a <em>group</em> iff</p>
+<ol>
+<li>
+<p>there exists an <em>identity element</em>, <span class="math">\(e\)</span>, s.t. <span class="math">\(\forall x \in G, x\ast e=e \ast x = x\)</span>.</p>
+</li>
+<li>
+<p><span class="math">\(\forall x \in G\)</span> there exists an <em>inverse</em>, <span class="math">\(x^{-1}\)</span>, s.t. <span class="math">\(x\ast x^{-1}=x^{-1}\ast x = e\)</span>.</p>
+</li>
+<li>
+<p><span class="math">\(\forall x,y \in G, x\ast y \in G\)</span> and <span class="math">\(y\ast x \in G\)</span>.</p>
+</li>
+</ol>
+<p>What would the behaviour of a sexual system look like if all individuals were members of a group? Can we find such systems in nature, or are our constructions purely artificial?</p>
+<h1 id="some-notation-and-terminology-of-group-theory">Some notation and terminology of Group Theory</h1>
+<p>We call the <em>order</em> of group <span class="math">\(G\)</span> the number of elements in the group, denoted <span class="math">\(|G|\)</span>. A group, <span class="math">\(G\)</span>, is called <em>abelian</em> if the operation is commutative, i.e. <span class="math">\(\forall x,y \in G, x\ast y = y\ast x\)</span>. A subset <span class="math">\(H \subset G\)</span> is called a <em>subgroup</em> iff <span class="math">\(e\in H, \forall x \in H \Rightarrow x^{-1} \in H\)</span>, and <span class="math">\(H\)</span> is closed under the binary operation. A Cayley table of a group is <span class="math">\(n \times n\)</span> matrix where the <span class="math">\((ij)th\)</span> entry is the product of the <span class="math">\(ith\)</span> and <span class="math">\(jth\)</span> element. For example, consider <span class="math">\(\mathbb{Z}_2\times \mathbb{Z}_2=\{(0,0),(1,0),(0,1),(1,1)\}\)</span> under addition mod 2. The Cayley table is <span class="math">\[\left[ \begin{array}{cccc} (0,0) &amp; (1,0) &amp; (0,1) &amp; (1,1)\\ (1,0) &amp; (0,0) &amp; (1,1) &amp; (0,1)\\ (0,1) &amp; (1,1) &amp; (0,0) &amp; (1,0)\\ (1,1) &amp; (0,1) &amp; (1,0) &amp; (0,0) \end{array} \right]\]</span></p>
+<p>This matrix completely defines the group.</p>
+<h1 id="a-simple-stochastic-model">A simple stochastic model</h1>
+<p>We describe a stochastic process that will characterize our evolving population. Consider again a population of <span class="math">\(N\)</span> individuals where <span class="math">\(N_i(t)\)</span> denote the number of <span class="math">\(i\)</span> individuals in the population. We consider the interaction between two individuals to represent sexual reproduction. The birth-death process begins by two individuals being randomly chosen proportional to their frequency in the population. The new offspring ( product of the two individuals) is substituted for another randomly chosen individual, again proportional to frequency (thus the population size is constant). The process is repeated for each time step. For example, consider the group <span class="math">\(\mathbb{Z}_2=\{0,1\}\)</span>. Recall that in this group <span class="math">\(1\ast1=0\)</span>, so the probability that the population of 1s increases, i.e. <span class="math">\(N_1(t+1) = N_1(t) + 1\)</span>, is equal to the probabilty a 1 and 0 are chosen as parents, and a 0 is chosen to die:</p>
+<p><span class="math">\[\begin{aligned} P^{+} &amp;=P(N_1(t+1)=N_1(t)+1| N_1(t))\\ &amp;=\left( \frac{N_1(t)}{N} \frac{N_0(t)}{N-1}+\frac{N_0(t)}{N} \frac{N_1(t)}{N-1}\right) \frac{N_0(t)}{N}\\ &amp;=\left( \frac{2N_1(t)}{N} \frac{N_0(t)}{N-1}\right) \frac{N_0(t)}{N}\end{aligned}\]</span></p>
+<p>since for the population <span class="math">\(N_1(t)\)</span> to increase by one in a time step, the new individual resulting from the interaction must be a 1 and the death must be a 0. Similarly,</p>
+<p><span class="math">\[\begin{aligned} P^{-} &amp;=P(N_1(t+1)=N_1(t)-1| N_1(t))\\ &amp;=\left( \frac{N_1(t)}{N} \frac{N_1(t)-1}{N-1}+\frac{N_0(t)}{N} \frac{N_0(t)-1}{N-1}\right) \frac{N_1(t)}{N}\\\end{aligned}\]</span></p>
+<p>and <span class="math">\(P^{0}=P(N_1(t+1)=N_1(t)| N_1(t))=1-P^{+} -P^{-}\)</span>. Thus we have</p>
+<p><span class="math">\[\begin{aligned} E[N_1(t+1)|N_1(t)] &amp;=P^+\cdot (N_1(t)+1)+P^-\cdot (N_1(t)-1)+P^0\cdot (N_1(t))\\ &amp;=P^+-P^-+N_1(t)\Rightarrow\end{aligned}\]</span></p>
+<p><span class="math">\[E[N_1(t+1)-N_1(t)|N_1(t)]=P^+-P^-\]</span> Working with probabilities can be unwieldy, so we take the limit as <span class="math">\(\Delta t\rightarrow 0\)</span> and <span class="math">\(N \rightarrow \infty\)</span>. If we denote<span class="math">\(N_1(t)/N \approx x\)</span> (then <span class="math">\(N_0(t)/N \approx 1-x\)</span>), we have</p>
+<p><span class="math">\[\begin{aligned} &amp;P^+=2x(1-x)^2\\ &amp;P^-=x(x^2+(1-x)^2) \Rightarrow \\ &amp;\frac{dx}{dt} \approx P^+-P^-= x(1-2x)\end{aligned}\]</span></p>
+<p>This system has asymptotically stable points at <span class="math">\(x=0\)</span> and <span class="math">\(x=1/2\)</span>, i.e. when the population of 1’s is extinct or equal to the population of 0’s.</p>
+<h1 id="general-model">General model</h1>
+<p>Initially, to model such an evolving system, we consider only <span class="math">\(\Delta t\rightarrow 0\)</span> and <span class="math">\(N \rightarrow \infty\)</span>. Thus we enter the well-studied realm of continuous dynamical systems. Given a group of order <span class="math">\(n\)</span>, we need some way to introduce the group structure into the dynamical system. The Reverse Cayley matrix, <span class="math">\(A\)</span>, is defined as an <span class="math">\(n\times n\)</span> matrix where the <span class="math">\(ith\)</span> column of <span class="math">\(A\)</span> contains the product of frequencies such that the product of the corresponding elements is the <span class="math">\(ith\)</span> element of the group. For example, consider <span class="math">\(\mathbb{Z}_2\times \mathbb{Z}_2=\{(0,0),(1,0),(0,1),(1,1)\}\)</span>, and let <span class="math">\(e,x,y,z\)</span> denote the frequencies of the enumerated set. Then define <span class="math">\(A\)</span> as <span class="math">\[\left[ \begin{array}{cccc} e^2 &amp; ex &amp; ey &amp; ez\\ x^2 &amp; xe &amp; xz &amp; xy\\ y^2 &amp; yz &amp; ye &amp; yx\\ z^2 &amp; zy &amp; zx &amp; ze \end{array} \right]\]</span> The matrix can easily be constructed from the group Cayley table. In each row, for every element <span class="math">\(g \in G\)</span>, there exists a pair of elements such that the product is <span class="math">\(g\)</span>. Compare the Reverse Cayley matrix with the the Cayley matrix for <span class="math">\(\mathbb{Z}\times \mathbb{Z}_2\)</span> given in section 2.</p>
+<p>The dynamics of the system are given by the following system of equations, analogous to the limiting case in the example with <span class="math">\(\mathbb{Z}_2\)</span>. It is straightforward to show the dynamics are the same. In what follows, <span class="math">\(\mathbf{1}\)</span>=(1,1…,1) and <span class="math">\(\mathbf{e_i}\)</span> are the standard euclidean basis vectors and <span class="math">\(x_i\)</span> is the <span class="math">\(ith\)</span> element in the group.</p>
+<p><span class="math">\[\begin{aligned} \dot{x}_j &amp;=P^{+}_{j}-P^{-}_{j}\\ &amp;=\left(\sum^{n}_{i=1}\ A_{ij}\right)(1-x_j) - \left(1-\sum^{n}_{i=1}\ A_{ij}\right)x_j\\ &amp;= \sum^{n}_{i=1}\ A_{ij} - x_j \\ &amp;= \mathbf{1}\cdot A \mathbf{e_j} - x_j \text{ which can also be rewritten, if convenient, as}\\ &amp;=\mathbf{1}\cdot A (-x_1,\ldots, -x_{i-1},1-x_i,-x_{i+1}, \ldots,-x_n)^T\end{aligned}\]</span></p>
+<p>This greatly simplifies our dynamics. In fact, it is now trivial to show that the barycenter of the <span class="math">\(n\)</span>-simplex, <span class="math">\(S_n\)</span>, is an interior stable point: suppose the frequency vector <span class="math">\(\vec{\mathbf{x}}=(1/n, \ldots, 1/n)\)</span>, then <span class="math">\(A=A(\vec{\mathbf{x}})=\frac{1}{n^2}J_n\)</span>, where <span class="math">\(J_n\)</span> is the matrix full of ones, then</p>
+<p><span class="math">\[\begin{aligned} \dot{x}_i &amp;=\frac{1}{n^2}\mathbf{1}\cdot J_n (1/n,\ldots,1-1/n,\ldots, 1/n)^T\\ &amp;=\frac{1}{n^2} n\mathbf{1}\cdot (1/n,\ldots,1-1/n,\ldots, 1/n)^T\\ &amp;=\frac{1}{n}(1-\frac{1}{n}-\ldots -\frac{1}{n})=0\end{aligned}\]</span></p>
+<p>For the rest of the paper, let <span class="math">\(x_1\)</span> represent the frequency of the identity element of the underlying group <span class="math">\(G\)</span>. Recall the heuristic definition of an invariant manifold is a manifold, <span class="math">\(N\)</span>, such that if the system starts somewhere in <span class="math">\(N\)</span>, it stays in <span class="math">\(N\)</span> for all time . A useful concept in this study is the <em>support</em> of an invariant manifold, <span class="math">\(N\)</span>, defined as the following: <span class="math">\(i\in Supp(N)\)</span> iff <span class="math">\(x_i&gt;0\)</span> in <span class="math">\(Int(N)\)</span>. Define the <em>order</em> of the manifold, denoted <span class="math">\(|N|\)</span>, as <span class="math">\(|Supp(N)|\)</span>.</p>
+<h4><span class="math">Theorem 1</span></h4>
+<p><span class="math">\(\{ i_1, i_2, ...,i_k\}\)</span> is an subgroup of G iff the sub-manifold of the dynamical system with support <span class="math">\(\{ i_1, i_2, ...,i_k\}\)</span> is invariant.</p>
+<meta charset="utf-8"/>
+<p>----------------------</p>
+<h4>Proof</h4>
+<p>Suppose a population <span style="line-height: 1.4;">is described by an underlying group </span><span class="math" style="line-height: 1.4;">\(G\)</span><span style="line-height: 1.4;">, and </span><span class="math" style="line-height: 1.4;">\(H\)</span><span style="line-height: 1.4;"> is a subgroup of </span><span class="math" style="line-height: 1.4;">\(G\)</span><span style="line-height: 1.4;">. Let </span>\(\vec{\mathbf{x}}\) denote the frequencies of each member of the population. Suppose the population starts at a point where only members of \(H\) are present. For example, for all <span class="math">\(i\in G \setminus H, x_i=0\)</span>. Let element \(i\) not be in \(H\). We can derive \(i\)'s frequency in the population by <span class="math">\(\dot{x}_i=\mathbf{1}\cdot A\mathbf{e_i}\)</span>. We then let the system evolve. I claim that all elements in the <span class="math">\(ith\)</span> column of <span class="math">\(A(\vec{\mathbf{x}})\)</span> are zero. If there was an element in the column that was non-zero, say <span class="math">\(x_k x_j\)</span>, then <span class="math">\(x_k x_j=x_i\)</span> by definition of the reverse Cayley matrix <span class="math">\(A\)</span>. But as <span class="math">\(x_k, x_j\)</span> are non-zero, elements <span class="math">\(k\)</span> and <span class="math">\(j\)</span> belong to <span class="math">\(H\)</span>. As <span class="math">\(H\)</span> is a group, this implies <span class="math">\(k \ast j = i \in H\)</span>, a contradiction. Thus, as the <span class="math">\(ith\)</span> column is all zero, <span class="math">\(\dot{x}_i=0\)</span>.</p>
+<p>On the other hand, suppose that \(H\) is not a subgroup. Then there exists <span class="math">\(u,v \in H\)</span> s.t. <span class="math">\(u\ast v =k \not \in H\)</span> thus <span class="math">\(x_k=0\)</span> while <span class="math">\(x_u,x_v&gt;0\)</span>. Then <span class="math">\(x_u x_v\)</span> is in the <span class="math">\(kth\)</span> column of <span class="math">\(A\)</span>. Thus <span class="math">\(\dot{x}_k=\mathbf{1}\cdot A\mathbf{e_k}&gt;0\)</span> and the system is not invariant.</p>
+<p>----------------------</p>
+<p>The above proposition implies that not all sub-simplicies of this system are invariant. If we consider the group <span class="math">\(\mathbb{Z}_2\times \mathbb{Z}_2\)</span>, then the only invariant manifolds of the system, described in terms of sub-simplicies of <span class="math">\(S_4\)</span>, are: the interior of <span class="math">\(S_4\)</span>, the interior of the three edges projecting from <span class="math">\((1,0,0,0)\)</span> and the point <span class="math">\((1,0,0,0)\)</span>. It is clear that, say, <span class="math">\(\mathbf{e}_2=(0,1,0,0)\)</span> is <em>not</em> an invariant manifold of the system as <span class="math">\((1,0)\ast (1,0) = (0,0) \not= (1,0)\)</span>, thus the system will evolve away from that point. It is clear that all invariant sub-manifolds of the dynamical system are actually sub-simplicies of <span class="math">\(S_n\)</span>. Both terms will be used interchangeably for the remainder of the paper.</p>
+<h4><span class="math">Theorem 2</span></h4>
+<p><span class="math">\(1\in Supp(N)\)</span> for all invariant manifolds, \(N\), of the dynamical system.</p>
+<meta charset="utf-8"/>
+<p>---------------------- </p>
+<h4>Theorem 3</h4>
+<p>If all the 2-dimension simplicies extending from <span class="math">\(\mathbf{e}_1\)</span> are invariant, then the underlying group is abelian.</p>
+<meta charset="utf-8"/>
+<p>----------------------</p>
+<p>The assumption implies that <span class="math">\(\{e,i\}\)</span> is a subgroup for all <span class="math">\(i \in G\)</span>. Thus, by the necessity of (sub)groups, <span class="math">\(i\ast i =e\)</span> for all <span class="math">\(i \in G\)</span>. It is a well-known (and interesting) theorem in group theory that this condition implies the group is abelian.</p>
+<p>There is an alternative way to describe the dynamical system that will be used in the next proposition. Define <span class="math">\(B_k\)</span> as the <em>binary Cayley matrix</em> s.t. if elements <span class="math">\(i\ast j=k\)</span>, then <span class="math">\((B_k)_{ij}=1\)</span> and 0 otherwise, for all <span class="math">\(1 \le k \le n\)</span>. Clearly <span class="math">\(\sum_k\ B_k = J_n\)</span> where <span class="math">\(J_n\)</span> is the <span class="math">\(n\times n\)</span> matrix of all ones. A property of <span class="math">\(B_k\)</span> is that the columns of the matrix are the standard euclidean basis vectors. It is simple to show the dynamical system can be rewritten as:</p>
+<p><span class="math">\[\dot{x}_i =\vec{\mathbf{x}}\cdot B_i \vec{\mathbf{x}} -x_i\]</span></p>
+<h4>Proposition</h4>
+<p>The barycenter of an invariant sub-manifold is (asymptotically) stable.</p>
+<p>----------------------</p>
+<h4>Proof</h4>
+<p> </p>
+<p>What follows is a partial proof. Taking the time derivative of the Lyapunov function <span class="math">\(V(\vec{\mathbf{x}}) = \sum\ x_{i}^2\)</span>  we get</p>
+<p><span class="math">\[\begin{aligned} V'/2 &amp; = \sum_i\ \vec{\mathbf{x}} \cdot x_i B_i \vec{\mathbf{x}} - \sum_i x_{i}^2 \\ &amp; = \vec{\mathbf{x}} \cdot \sum_i \ x_i B_i \vec{\mathbf{x}} - \vec{\mathbf{x}} \cdot I \vec{\mathbf{x}} \\ &amp; = \vec{\mathbf{x}} \cdot ( D-I) \vec{\mathbf{x}}\end{aligned}\]</span></p>
+<p>where <span class="math">\(D = \sum \ x_i B_i\)</span>. Next is an exercise to show that <span class="math">\(D-I\)</span> is a (semi) negative definite matrix which is equivalent to showing its eigenvalues are (negative) non-positive. I have not been able to generalize the idea to every system yet.</p>
+<meta charset="utf-8"/>
+<p>----------------------</p>
+<p> </p>
+<p>Using this new approach in notation, we can translate the properties of groups, outlined in the introduction, to the language of dynamical systems if the population follows our birth-death process.</p>
+<h4>Theorem 4</h4>
+<ol>
+<li>
+<p>Unique Identity Element: the only invariant sub-manifold with order 1 is <span class="math">\(\mathbf{e}_1=(1,0,..,0)\)</span>.</p>
+</li>
+<li>
+<p>Unique Inverse Element: <span class="math">\(B_1\)</span> is symmetric.</p>
+</li>
+<li>
+<p>Closure: the interior of the simplex <span class="math">\(S_n\)</span> is invariant.</p>
+</li>
+</ol>
+<meta charset="utf-8"/>
+<p>----------------------</p>
+<p> </p>
+<h4>Proof</h4>
+<ol>
+<li>
+<p>This is clear as the only subgroup of order 1 of any group is <span class="math">\(\{e\}\)</span>, thus the only invariant manifold with order 1 is a population of just identity elements. On the other hand, if the only invariant manifold with order 1 is <span class="math">\((1,0,..0)\)</span>, then <span class="math">\(\{x_1\}\)</span> is the only subgroup of order 1 of the underlying group. Thus, as <span class="math">\(e\)</span> belongs to every (sub)group, <span class="math">\(x_1=e\)</span>.</p>
+</li>
+<li>
+<p>For any <span class="math">\(x \in G\)</span> with enumeration <span class="math">\(i_x\)</span>, there exists a 1 in the <span class="math">\(i_x\)</span> column of <span class="math">\(B_1\)</span>. This means, there exists a <span class="math">\(y \in G\)</span> s.t. <span class="math">\(x*y=e\)</span>. As <span class="math">\(B_1\)</span> is symmetric, this also implies in the <span class="math">\(i_y\)</span>th column of <span class="math">\(B_1\)</span>, there is a 1 in row <span class="math">\(i_x\)</span>, implying <span class="math">\(y*x=e\)</span> . A remark: this is a poor characteristic of the unique inverse element property, as it relies too much on <span class="math">\(B_i\)</span>. I would prefer a more dynamical definition.</p>
+</li>
+<li>
+<p>Follows from the proof of proposition 3.1.</p>
+</li>
+</ol>
+<meta charset="utf-8"/>
+<p>----------------------</p>
+<p> </p>
+<p>Aside from the poor definition of a unique inverse element, it would be a interesting question to ask, if a dynamical system satisfies the three characteristics above then does there exists an underlying group? Let’s tentatively say, if a given dynamical system satisfies the above three properties, we call such a system a <em>Group-Equivalent system</em>. Then, if there exists an underlying group, the system is Group-Equivalent i.e. satisfies the above properties; if a system is Group-Equivalent, does there exist an underlying group “driving” the system? A system driven by group <span class="math">\(G\)</span> is not unique as adding multiplicative constant does not change the dynamics.</p>
+<p>Suppose a dynamical system has an underlying group structure. Then by Lagrange’s Theorem (the order of every subgroup of <span class="math">\(G\)</span> divides the order of <span class="math">\(G\)</span>) we know that the order of every invariant sub-manifold divides the order of <span class="math">\(S_n\)</span> (recall <span class="math">\(|Int(S_n)|=n\)</span>). Suppose now that a system is Group-Equivalent, and it is true that this implies an underlying group structure. Can we prove Lagrange’s Theorem using a dynamical approach?</p>
+<h1 id="conclusion">Conclusion</h1>
+<p>The last few remarks foreshadow the possibilities of studying a dynamical system with an underlying group, or a Group-Equivalent system. Two ideas can next occur: First, we use dynamical systems theory to prove theorems in group theory; second, we use group theory to solve problems involving dynamical systems. I believe the former to be of little value outside of itself; the literature and research in group theory is already so large that this novel approach to group theory will lead to nothing novel in the field as a whole. The latter idea is more fruitful I believe. If it is possible to transform a dynamical system into a system satisfying the properties outlines above, then we can apply very strong ideas from group theory to the system.</p>
+<p>Further extensions include including fitness levels to the populations and finding real-world applications of group-driven systems, both of which have been addressed, to some degree, in a companion paper to this, see <em>Extensions of Population Dynamics of Algebraic Groups.</em></p>
+<p>J. Hofbauer, K. Sigmund, <em>The Theory of Evolution and Dynamical Systems</em>. Cambridge UP. 1988.</p>
+<p>M. Hirsch, S. Smale, R.L. Devaney <em>Differential Equations, Dynamical Systems &amp; An Introduction to Chaos</em>. Elsevier Academic Press. 2004.</p>
+<p>J.A. Gallian, <em>Contemporary Abstract Algebra</em>. Houghton Mifflin. 2006.</p>
+<p>C. Davidson-Pilon <em>Extensions of Population Dynamics of Algebraic Groups</em> Submitted to <em>Journal of Theoretical Biology</em> 2011.</p>

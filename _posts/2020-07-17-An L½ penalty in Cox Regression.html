@@ -1,0 +1,39 @@
+
+---
+layout: post
+title:  "An L½ penalty in Cox Regression"
+date:   2020-07-17T11:27:00-04:00
+---
+
+<p>Following up from a <a href="https://dataorigami.net/blogs/napkin-folding/l1-penalty-in-cox-regression">previous blog post</a> where we explored how to implement an \(L_1\) and elastic net penalty to induce sparsity, a <a href="http://gr.xjtu.edu.cn/LiferayFCKeditor/UserFiles/File/L%200.5%20regularization.pdf">paper</a>, by Xu Z B, Zhang H, Wang Y, et al., explores what a <span>\(L_{1/2}\) penalty</span> is and how to implement it.</p>
+<p>But first, I think we are familiar with an <span>\(L_1\) penalty, but what is an </span>\(L_0\) penalty then? If you work out the math, it is a penalty that <em>counts the number</em> of <em>non-zero </em><i>coefficients</i>, independent of the magnitude of the coefficients:</p>
+<meta charset="utf-8"/>
+<p>$$ll^*(\theta, x) = \sum_i^N ll(\theta, x_i) - \lambda \sum_{k=0}^D 1_{\theta_k \ne 0}$$</p>
+<p>where \(D\) is the number of potential parameters. Thinking about this for a moment, this means that the <span>\(L_0\)</span> penalty minimizes the AIC, since the AIC is:</p>
+<p>$$AIC = -2 ll + 2D^*$$</p>
+<p>where \(D^*\) is the number of parameters in the model. It turns out that <span>\(L_0\)</span> penalties encourage <em>lots</em> of sparsity in their solutions, much more than \(L_1\).</p>
+<p>Given that, the <span>\(L_{1/2}\)</span> penalty is the balance between penalizing the magnitudes of the coefficients and encouraging lots of sparsity. The paper linked above gives reasons why <span>\(L_{1/2}\)</span> is perhaps superior to both <span>\(L_1\)</span> and \(L_0\). Importantly, solving <span>\(L_0\)</span> is NP-hard because it involves a combinatorial explosion of potential solutions that can't be solved with gradient methods. </p>
+<p>The authors provide a very simple algorithm for solving the<span> \(L_{1/2}\)</span> problem, see Section 3 of the paper. It involves repeatedly solving a related <span>\(L_1\)</span> problem with updating coefficient-specific penalizer values. In <em>lifelines</em>, we recently introduced the ability to <a href="https://lifelines.readthedocs.io/en/latest/Survival%20Regression.html#penalties-and-sparse-regression">set specific coefficient</a> <span>penalizer </span><span>values, and we can solve </span><span>\(L_1\) problems too. Let's see if we can solve </span>\(L_{1/2}\) problems now: </p>
+<pre><code class="python">def l_one_half_cox(lambda_, df, T, E):
+    EPSILON = 0.00001
+
+    weights = lambda_ * np.ones(df.shape[1]-2)
+    cph = CoxPHFitter(l1_ratio=1.0, penalizer=weights)
+    cph.fit(rossi, "week", "arrest")
+    max_iter = 20
+    i = 1
+
+    while i &lt; max_iter:
+        weights = lambda_ / (np.sqrt((cph.params_.abs()).values) + EPSILON)
+        cph = CoxPHFitter(l1_ratio=1.0, penalizer=weights)
+        cph.fit(rossi, "week", "arrest")
+        i += 1
+
+    return cph.params_
+</code></pre>
+<p>In the above code, we repeatedly solve a new \(L_1\) problem with updated penalizer weights. This, according to the authors and my own assumption that it can be extended easily to the Cox model, gives us our \(L_{1/2}\) solution. Graphically, we can vary the `lambda_` parameter can see how the coefficient solutions change:</p>
+<p style="text-align: left;"><img alt="" height="374" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2020-07-17_at_11.10.40_AM.png?v=1594998664" style="float: none;" width="572"/></p>
+<p style="text-align: left;">Compare this to our \(L_1\) solution:</p>
+<p style="text-align: left;"><img alt="" height="416" src="//cdn.shopify.com/s/files/1/0678/1739/files/Screen_Shot_2020-03-08_at_10.58.02_AM.png?v=1583760550" width="527"/></p>
+<h3 style="text-align: left;"></h3>
+<h3 style="text-align: left;"></h3>

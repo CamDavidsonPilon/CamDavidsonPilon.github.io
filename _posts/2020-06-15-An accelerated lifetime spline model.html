@@ -1,0 +1,13 @@
+
+---
+layout: post
+title:  "An accelerated lifetime spline model"
+date:   2020-06-15T20:22:00-04:00
+---
+
+<p>A <a href="https://arxiv.org/abs/2006.06807">paper</a> came out recently with a novel <em>accelerated lifetime</em> (AFT) model with cubic splines. This should pique your interest for a few reasons:</p>
+<p>1. It helps dethrone the Proportional Hazard (PH) model as the default survival model. People like the PH model because it doesn't make any distributional assumptions. However, like a Trojan horse, there are very strong <em>implicit</em> assumptions that are inherited, often which are too restricting. Suffice to say, I am not a big proponent of the PH model. </p>
+<p>2. A spline-based AFT model weakens the CPH's throne because the model can fit to a larger space of potential models. For example, the Weibull AFT model is a special case of this new AFT model. The authors of the paper also carefully demonstrate that it often has lower bias, standard error, or AIC than other popular AFT models (Generalized Gamma, Generalized F). </p>
+<p>3. AFT models are just simpler to explain. Coefficients of AFT models have a much nicer interpretation than PH or <span>Proportional Odds (PO) models. Simply: a positive (negative) coefficient multiplicatively accelerates (decelerates) a subject's time-to-event. So, a coefficient of 2 means that a subject experiences the event twice as fast as a baseline subject, on average. </span></p>
+<p>I'm too lazy to give the mathematical details of the model (just drank a strong beer), but what I do want to mention is that the model is implementable in lifelines using our custom model syntax. Here's the <a href="https://github.com/CamDavidsonPilon/lifelines-replications/blob/master/replications/Crowther_Royston_Clements_2020.py">code</a>. </p>
+<p>Update: it's now part of lifelines as `lifelines.CRCSplineFitter`. Happy coding! </p>

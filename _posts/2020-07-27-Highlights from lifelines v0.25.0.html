@@ -1,0 +1,150 @@
+
+---
+layout: post
+title:  "Highlights from lifelines v0.25.0"
+date:   2020-07-27T13:42:00-04:00
+---
+
+<p class="" id="ebcb0f8a-e668-4e23-bd65-eb601ecdc62f">Today, the 0.25.0 release of <em>lifelines</em> was released. I'm very excited about some changes in this version, and want to highlight a few of them. Be sure to upgrade with:</p>
+<p class="" id="91c2e6a2-5a8f-4455-ba73-bf3b64ecb292"><code>pip install lifelines==0.25.0</code></p>
+<h3 class="" id="a7a12c50-f2ab-4601-907e-494ca022f45e">Formulas everywhere!</h3>
+<p class="">Formulas, which should really be called Wilkinson-style notation but everyone just calls them formulas, is a lightweight-grammar for describing additive relationships. If you have used R, you'll likely be familiar with formulas. They are less common in Python, so here's an example: Writing <code>age + salary</code> is short-form for the expanded additive model: \(\beta_0 + \beta_1\text{age} + \beta_2\text{salary}\). Expanding on that, the grammar allows interaction terms quite easily: <code>age + salary + age : salary</code> is</p>
+<p class="">$$ \beta_0 + \beta_1\text{age} + \beta_2\text{salary} + \beta_3 \text{age $\cdot$ salary}$$</p>
+<p class="">Actually, the previous use is so common that a short form of this entire interaction and monomial terms exists: <code>age * salary</code>. These are just examples, but there is a large set of transformations, ways to handle categorical variables, etc.</p>
+<p class="">This is just the grammar though, and a compiler is needed to parse the string, and then translate the parsed string into code. This code can transform an initial dataset into its transformed version that allows the \(\beta\)s to be estimated. For example, transforming the following raw dataset using the formula <code>age * salary</code>:</p>
+<pre class="code" id="61321312-861e-4e85-86f1-71f798e4bbbe"><code class="python">df = pd.DataFrame({
+    'age': [35, 36, 40, 25, 55],
+    'salary': [60, 35, 80, 50, 100]
+})</code></pre>
+<p class="" id="9427cabf-803f-4b3a-b6ee-b4c70ac156c4">becomes:</p>
+<pre class="code" id="48cb4e95-acc2-462c-84b3-a4cf4c467aa0"><code>pd.DataFrame({
+    'age': [35, 36, 40, 25, 55],
+    'salary': [60, 35, 80, 50, 100],
+    'age:salary': [2100, 1260, 2400, 1750, 5500]
+    'Intercept': [1, 1, 1, 1, 1]
+})</code></pre>
+<p class="">This new dataframe can be given to any regression library to fit the \(\beta\)s. In Python, libraries like <a href="https://patsy.readthedocs.io/en/latest/">Patsy</a> and the new <a href="https://matthewwardrop.github.io/formulaic/">Formulaic</a> are the parser + code-generator.</p>
+<p class="" id="4872c290-b36d-4145-b18d-09f03595c0bf">Anyways, <em>lifelines</em> previously requested that all transformations occur in a preprocessing step, and the final dataframe given to a <em>lifelines</em> model. This created some problems, however:</p>
+<ol class="numbered-list" id="8efb91ee-92f6-432c-9c2c-068af08b0570" start="1">
+<li>The user had to learn Patsy in order to use formulas in <em>lifelines</em>, which is a barrier to entry.</li>
+</ol>
+<ol class="numbered-list" id="2be38e36-e96f-4f63-981e-18ec3afc66a2" start="2">
+<li>In methods like <code>plot_covariate_groups</code> which relied on examining potentially more than one variable, the user had to manually recreate potential interaction terms or more complicated transformations.</li>
+</ol>
+<ol class="numbered-list" id="0cb56478-d427-4540-8208-58e4fe3b4ee3" start="3">
+<li>Users often had to <code>drop</code> columns from their dataframe prior to fitting with <em>lifelines</em>, rather than telling <em>lifelines</em> what they wanted to use in the regression. This led to some ugly code.</li>
+</ol>
+<p class="" id="def9d8af-f3a8-4676-a15e-bebc6edce44d">With <em>lifelines</em> v0.25.0, formulas are now native (though optional) to <em>lifelines</em> model (old code should still work as well):</p>
+<pre class="code" id="e244687d-3dd0-43e2-8cb2-694b11cee807"><code class="python">from lifelines import CoxPHFitter
+from lifelines.datasets import load_rossi
+
+rossi = load_rossi()
+
+cph = CoxPHFitter()
+cph.fit(rossi, "week", "arrest", formula="age + fin + prio + paro * mar")
+cph.print_summary(columns=['coef', 'se(coef)', '-log2(p)'])
+
+"""
+&lt;lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations&gt;
+             duration col = 'week'
+                event col = 'arrest'
+      baseline estimation = breslow
+   number of observations = 432
+number of events observed = 114
+   partial log-likelihood = -659.49
+         time fit was run = 2020-07-27 15:33:44 UTC
+
+---
+            coef   se(coef)   -log2(p)
+covariate
+age        -0.06       0.02       8.21
+fin        -0.37       0.19       4.19
+prio        0.10       0.03      10.96
+paro       -0.10       0.20       0.73
+mar        -0.78       0.73       1.81
+paro:mar    0.36       0.84       0.57
+---
+Concordance = 0.63
+Partial AIC = 1330.98
+log-likelihood ratio test = 31.78 on 6 df
+-log2(p) of ll-ratio test = 15.76
+"""</code></pre>
+<p class="" id="79f96cb2-f2b8-4de9-bb83-afd2ec78cb15">However, the <em>real</em> strength in formulas is their ability to create <em>basis splines</em> easily. Basis splines are highly flexible non-linear transformations of a variable - they are essential in the modern statistical inference toolkit:</p>
+<pre class="code" id="8131d0da-ddd8-4497-83ed-14f56f9e0570"><code class="python">cph.fit(rossi, "week", "arrest", formula="age + fin + bs(prio, df=3)")
+cph.print_summary(columns=['coef', 'se(coef)', '-log2(p)'])
+
+"""
+&lt;lifelines.CoxPHFitter: fitted with 432 total observations, 318 right-censored observations&gt;
+             duration col = 'week'
+                event col = 'arrest'
+      baseline estimation = breslow
+   number of observations = 432
+number of events observed = 114
+   partial log-likelihood = -659.88
+         time fit was run = 2020-07-27 15:36:34 UTC
+
+---
+                    coef   se(coef)   -log2(p)
+covariate
+age                -0.07       0.02       9.91
+fin                -0.32       0.19       3.49
+bs(prio, df=3)[0]   1.41       0.96       2.82
+bs(prio, df=3)[1]  -0.18       1.02       0.22
+bs(prio, df=3)[2]   2.82       0.81      11.06
+---
+Concordance = 0.63
+Partial AIC = 1329.76
+log-likelihood ratio test = 31.00 on 5 df
+-log2(p) of ll-ratio test = 16.70
+"""</code></pre>
+<p class="" id="4c1f3059-01c6-492d-9b10-f448a9eed65d">Importantly, the new transform logic in <em>lifelines</em> is extended to the <code>predict</code> and plotting methods too.</p>
+<p class="" id="78944d5e-0320-412b-8408-6c3511e4314d">For models that have more than one parameter, like <code>WeibullAFTFitter</code> , formulas can be crafted for each parameter.</p>
+<pre class="code" id="dd7f818a-9b32-4e33-9f6a-077909f85ce1"><code class="python">from lifelines import WeibullAFTFitter
+
+wf = WeibullAFTFitter()
+wf.fit(rossi, "week", "arrest", formula="age + fin + paro * mar", ancillary="age * fin")
+wf.print_summary(columns=['coef', 'se(coef)', '-log2(p)'])
+
+"""
+&lt;lifelines.WeibullAFTFitter: fitted with 432 total observations, 318 right-censored observations&gt;
+             duration col = 'week'
+                event col = 'arrest'
+   number of observations = 432
+number of events observed = 114
+           log-likelihood = -681.82
+         time fit was run = 2020-07-27 16:49:31 UTC
+
+---
+                    coef   se(coef)   -log2(p)
+param   covariate
+lambda_ Intercept   2.19       0.68       9.59
+        age         0.11       0.03      10.13
+        fin         0.12       0.19       0.97
+        paro        0.17       0.14       2.19
+        mar         0.33       0.53       0.93
+        paro:mar   -0.14       0.61       0.29
+rho_    Intercept   1.36       0.41       9.98
+        age        -0.05       0.02       7.25
+        fin        -0.38       0.54       1.04
+        age:fin     0.02       0.02       1.74
+---
+Concordance = 0.62
+AIC = 1383.65
+log-likelihood ratio test = 29.60 on 8 df
+-log2(p) of ll-ratio test = 11.97
+"""</code></pre>
+<p class="" id="eb1ddb03-b84b-4ad4-af6e-9e6a3c3a4a56"> </p>
+<h3 class="" id="a1c2830d-148b-412d-a892-333448c5b90a">New KMunicate plots!</h3>
+<p class="" id="fc214de5-aebe-41fa-b6f6-6596c7c7d94c">One of my favourite types of research articles are on changes to improving scientific understanding and communication. Last year, <a href="https://bmjopen.bmj.com/content/9/9/e030215">a paper</a>, by T. Morris <em>et al</em>., came out that surveyed statisticians, clinicians and stakeholders on how to better communicate the workhorse of survival analysis, Kaplan-Meier (KM) curves. A number of potential options were shown to the over 1100 survey participants, and ratings to each option were made. The survey results show two changes that could be made to improve understanding of KM curves. </p>
+<p class="" id="8abfc327-7794-42cf-b1c2-7c0a67ebfae5">1. Always show confidence intervals around the curves (<em>lifelines</em> does this by default)</p>
+<p class="">2. Present all the summary information at the bottom. Many KM curves would present a<em>t-risk</em> numbers, and <em>lifelines</em> had this option as well:</p>
+<p class="" style="text-align: left;"><img alt="" height="363" src="//cdn.shopify.com/s/files/1/0678/1739/files/add_at_risk.png?v=1595870905" style="float: none;" width="484"/></p>
+<p class="" id="f1e0159e-32b6-4e70-b275-6ad3f4220c28">But the participants really liked <em>all</em> summary information, including deaths and censorship, not just at-risk. <em>lifelines</em> now presents all this information:</p>
+<p class=""><img alt="" height="349" src="//cdn.shopify.com/s/files/1/0678/1739/files/add_at_risk_bdf7f037-5035-4f6f-a04e-5f3cdccaffb1.png?v=1595870938" width="489"/></p>
+<p class="" id="30d2b668-a158-4fc1-bb8d-6e1c53fa9146">It's not displayed by default (that may change), but with the <code>at_risk_counts</code> kwarg in the call to <code>KaplanMeierFitter.plot</code>.</p>
+<p class="" id="79ed2469-56f9-4a73-9cb7-e3fea6c18b04">This small change has the potential to be a massive improvement in understanding these plots. I'm so happy I saw this paper come across my desk.</p>
+<h3 class="" id="31c9da8b-d93d-49d4-8f57-f2256fcc2646">Performance improvements</h3>
+<p class="" id="6c2a16d4-daff-4e03-8549-cafe879d47a4">Performance improvements was actually part of a release a few weeks back and not the v0.25.0, but I wanted to highlight it anyways. I found a bug in the switching algorithm that we use for choosing which algorithm to run for the Cox model (see post on how that's done <a href="https://dataorigami.net/blogs/napkin-folding/using-statistics-to-make-statistical-computations-faster">here</a>). This bug made the choice of algorithm sub-optimal, specifically for very large datasets. After fixing the bug, <code>CoxPHFitter</code> is able to process millions of rows in less than a tenth of a second (not to trash on it, but just for comparison: R takes on the order of seconds, and the core algorithm is written in C). This is probably one of the fastest Cox-Efron models, and it's written only in Python. This makes me really proud.</p>
+<h3 class="" id="c7e9bbbc-2ea4-4018-bcee-af424c91a9d3">Conclusion</h3>
+<p class="" id="e89ba199-436b-4ed2-a710-8cafd5ba3f6c">I'm really happy with where this release landed. There were lots of ups and downs in code quality and structure, but I feel like I settled on something nice. Formulas are a big deal, and will take <em>lifelines</em> to the next level. Future release will have support for partial-effect plots, and more.</p>
+<p class="" id="6c213c77-3fea-4592-8fff-33ad600beb74">You can see all the improvements, and important API changes, in v0.25.0 <a href="https://github.com/CamDavidsonPilon/lifelines/releases/tag/v0.25.0">here</a>.</p>

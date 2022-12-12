@@ -1,0 +1,72 @@
+
+---
+layout: post
+title:  "Poissonization of Multinomials"
+date:   2016-05-29T13:17:00-04:00
+---
+
+<h2>Introduction</h2>
+<p>I've seen some really interesting probability &amp; numerical solutions using a strategy called <em>Poissonization</em>, but Googling for it revealed very few resources (just some references in some textbooks that I don't have quick access to). Below are my notes and repository for <em></em>Poissonization<em>. </em>After we introduce the theory, we'll do some examples.</p>
+<p>The technique relies on the following theorem:</p>
+<blockquote>
+<p>Theorem: Let \(N \sim \text{Poi}(\lambda)\) and suppose \(N=n, (X_1, X_2, ... X_k) \sim \text{Multi}(n, p_1, p_2, ..., p_k)\). Then, marginally, \(X_1, X_2, ..., X_k\) are are independent Poisson, with \(X_i \sim \text{Poi}(p_i \lambda)\). [1]</p>
+</blockquote>
+<p>The proof of this theorem is as follows. First, by the law of total probability:</p>
+<p>$$<br/>\begin{align*}<br/>P(X_1=x_1, ..., X_k = x_k\;|\; n, \mathbf{p})<br/>&amp; = \sum_{n=0}^{\infty} P(X_1=x_1, ..., X_k = x_k \;|\; N=n) \frac{e^{-\lambda}\lambda^n}{n!} \\<br/>&amp; = \sum_{n=0}^{\infty} \frac{(x_1 + ... + x_k)!}{x_1!x_2! \cdots x_k!}p_1^{x_1}\cdots p_k^{x_k}\frac{e^{-\lambda}\lambda^n}{n!}I_{x_1 + ... + x_k = n} \\<br/>&amp; = e^{-\lambda}\lambda^{x_1} \cdots \lambda^{x_k}p_1^{x_1} \cdots p_k^{x_k}\frac{1}{x_1!x_2! \cdots x_k!}\\<br/>&amp; = e^{-\lambda}(\lambda p_1)^{x_1} \cdots (\lambda p_k)^{x_k}\frac{1}{x_1!x_2! \cdots x_k!}\\<br/>&amp; = \prod_{i=1}^k \frac{e^{-\lambda p_i}(\lambda p_i)^{x_i}}{x_i!}\;\;\;\;\blacksquare<br/>\end{align*}<br/>$$</p>
+<p>Let's see how we can use this to solve probability problems. Let \((Y_1, Y_2, ...Y_k)\) be \(\text{Multi}(n, p_1, p_2, ..., p_k)\), and we are interested in when the realized values fall into some set \(A\). Let \(X_i\) be defined as above, that is, \(X_i \sim \text{Poi}(p_i \lambda)\). Then, from above, we can write:  </p>
+<p>$$<br/>\begin{align*}<br/>P((X_1, ... X_k) \in A) &amp; = \sum_{i=0}^\infty \frac{e^{-\lambda}\lambda^n}{n!} P((Y_1, ... Y_k) \in A)\\<br/>&amp; = e^{-\lambda} \sum_{i=0}^\infty \frac{\lambda^n}{n!} P((Y_1, ... Y_k) \in A)\\<br/>&amp; e^{\lambda}P((X_1, ... X_k) \in A) = \sum_{i=0}^\infty \frac{\lambda^n}{n!} P((Y_1, ... Y_k) \in A) \;\;\;(★)<br/>\end{align*}<br/>$$</p>
+<p>Both sides of the last line are infinite series of \(\lambda^n\), and thus their coefficients must be equal. Thus, as \(N=n\), \(P((Y_1, ... Y_k) \in A)\) is equal to  \(n! c(n)\) where \(c(n)\) is the coefficient of \(\lambda^n\) in the expansion of \(e^{\lambda}P((X_1, ... X_k) \in A)\). </p>
+<h2>Example 1</h2>
+<p>Let's try an example: </p>
+<meta charset="utf-8"/>
+<blockquote>
+<p><i>n</i> defects are randomly distributed amongst <i>k</i> integrated-circuit chips produced by a factory (any number of defects may be found on a chip and each defect is independent of the other defects). If<em> n</em> = 4, <i>k</i>=7, find the probability that there is a chip with at least 3 defects. </p>
+</blockquote>
+<p>This is a classic case where it's easier to compute the complementary probability: what is the probability that all chips have less than 3 defects (and then we subtract this from 1 to get the original probability).  </p>
+<p>Since each defect is randomly distributed, \(p_i = p = \frac{1}{7}\). Below, we invoke Poissonization by letting \(n\) be randomly distributed as \( \text{Poi}(\lambda)\) (later we will condition on its actual value of 4). That means that we can assume the number of defects on a chip is a Poisson random variable with rate \(\lambda p = \frac{\lambda}{7}\). </p>
+<p>$$<br/>\begin{align*}<br/>P(\text{All chips have $\le$ 2 defects})<br/>&amp; = \Big(P(\text{Chip has 0 defect}) + P(\text{Chip has 1 defect}) + P(\text{Chip has 2 defect})\Big)^7 \\<br/>&amp; = \Big(e^{-\lambda/7} + \frac{e^{-\lambda/7}(\lambda/7)^1}{1!} + \frac{e^{-\lambda/7}(\lambda/7)^2}{2!}\Big)^7\\<br/>&amp; = e^{-\lambda}\Big(1 + \frac{\lambda}{7} + \frac{\lambda^2}{2!7^2}\Big)^7\\<br/>\end{align*}<br/>$$</p>
+<p>When we multiply the above by \(e^{\lambda}\), and imagine the right-hand side is expanded, we get a form that is familiar to equation (<span>★</span>). This means that we are interested in the coefficient of \(\lambda^4\). We could expand this by hand, but instead let's expand this computationally. For this, it's useful to know a bit about multinomial expansions. But basically you are looking for solutions to </p>
+<p>$$<br/>k_0 + k_1 + k_2 = 7\\<br/>0 k_0 + 1 k_2 + 2 k_2 = 4<br/>$$</p>
+<p>The first equation comes from the constraint for the powers of a multinomial expansion to sum to the outside exponent. The second equation comes from our need to find powers of \(\lambda\) that sum up to 4 (the 0,1,2 come from the existing powers of \(\lambda\)). Two equations, three unknowns, solving for the values:</p>
+<p>$$<br/>\begin{align*} <br/>k_2 &amp;= k_0 - 3 \\ <br/>k_1 &amp;= 10 - 2k_0\\<br/> 3 &amp;\le k_0 \le 5<br/>\end{align*}<br/>$$</p>
+<p>Computationally, we can write this in Python:</p>
+<script src="https://gist.github.com/CamDavidsonPilon/e6e9b99d9eab3546d054878002a67199.js"></script>
+<p>We get the answer 0.92711, so the complement to this is 0.07289 and is the probability of the original question.</p>
+<meta charset="utf-8"/>
+<h2>Example 2</h2>
+<p>This comes from FiveThiryEight's Riddler series: <a href="https://fivethirtyeight.com/features/santa-needs-some-help-with-math/">Santa Needs Some Help With Math</a>. I'll quote the problem here:</p>
+<meta charset="utf-8"/>
+<blockquote>
+<p>In Santa’s workshop, elves make toys during a shift each day. On the overhead radio, Christmas music plays, with a program randomly selecting songs from a large playlist.</p>
+<p> </p>
+<p>During any given shift, the elves hear 100 songs. A cranky elf named Cranky has taken to throwing snowballs at everyone if he hears the same song twice. This has happened during about half of the shifts. One day, a mathematically inclined elf named Mathy tires of Cranky’s sodden outbursts. So Mathy decides to use what he knows to figure out how large Santa’s playlist actually is.</p>
+<p> </p>
+<p>Help Mathy out: How large is Santa’s playlist?</p>
+</blockquote>
+<p>Okay, so let's translate this to our set up. We have \(k\) songs to choose from, and we sample 100 of them. Turns out that P(any song is played more than once) = 0.5. So in this case, we know the probability, but we don't know the \(k\). So, similarly to how we started above:</p>
+<meta charset="utf-8"/>
+<p>$$<br/>\begin{align*}<br/>P(\text{songs have 1 or less plays}) <br/>&amp; = \Big(P(\text{songs has 0 plays}) + P(\text{songs has 1 plays})\Big)^k \\<br/>&amp; = \Big(e^{-\lambda/k} + \frac{e^{-\lambda/k}(\lambda/k)^1}{1!}\Big)^k\\<br/>&amp; = e^{-\lambda}\Big(1 + \frac{\lambda}{k}\Big)^k\\<br/>\end{align*}<br/>$$</p>
+<p>Yay we have a binomial! They are much easier to work with. Now we need to answer:</p>
+<blockquote>
+<p>What is the coefficient of \(λ^{100}\)?</p>
+</blockquote>
+<meta charset="utf-8"/>
+<p>Call this coefficient \(c_{100}(k)\). Since we have a binomial, expanding the above is easy:</p>
+<p>$$<br/>c_{100}(k) = \frac{C(k, 100)}{k^{100}}<br/>$$</p>
+<p><span>Using the other piece of information above, that the probability of an "event" is 0.5, we can write an equation down:</span></p>
+<p>$$<br/>\begin{align*}<br/>0.5<br/>&amp; = 100! c_{100}(k) \\<br/>&amp; = 100! \frac{C(k, 100)}{k^{100}} \\<br/>&amp; = \frac{k!}{(k-100)! k^{100}} \\<br/>\end{align*}<br/>$$</p>
+<p>$$<br/>2\frac{k!}{(k-100)!} - k^{100} = 0<br/>$$</p>
+<p><span>We can use Python (!!) to numerically solve this equation for \(k\). </span></p>
+<script src="https://gist.github.com/CamDavidsonPilon/39560f562da0a9ed6b580ee1b2c6962f.js"></script>
+<p> </p>
+<p>Because the sign flips at 7175, we conclude that either 7174 or 7175 is the closest answer.  </p>
+<p> </p>
+<p>Looking for more examples?</p>
+<ul>
+<li><span style="line-height: 1.4;"><a href="http://math.stackexchange.com/a/1798953/46257">Expected rolls to get 3 of any number</a> on MSE</span></li>
+<li><a href="http://bulletin.imstat.org/2014/02/student-puzzle-corner/"><span style="line-height: 1.4;">Dispensing cookies</span></a></li>
+<li><span style="line-height: 1.4;">See [1] for more examples and problems too</span></li>
+</ul>
+<p> </p>
+<p>[1] DasGupta, A. <em>Probability for Statistics and Machine Learning. http://link.springer.com/book/10.1007%2F978-1-4419-9634-3</em></p>
+<p> </p>
