@@ -23,7 +23,7 @@ email: cam.davidson.pilon@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   Data science, statistics, Python and machine learning blog by Cameron Davidson-Pilon
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "https://dataorigami.net" # the base hostname & protocol for your site, e.g. http://example.com
+url: "http://dataorigami.net" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:  CamDavidsonPilon
 
 # Mastodon instances
