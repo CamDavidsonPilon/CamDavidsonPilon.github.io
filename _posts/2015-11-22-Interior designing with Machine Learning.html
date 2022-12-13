@@ -96,7 +96,7 @@ collection = np.argsort( reduced_data )
 </table>
 <p>The technique does seem to fail if there are errant colors in the collection. Above, probably the light-purple book belongs on a different bookshelf. However, the PCA ordering does do a good job of smoothing the gradient.</p>
 <p>I projected the colours onto the first principle component, which is is $[0.57, 0.59, 0.56]$. Notice how close the values are. This means that the greatest variation in the colors is on the line that (close to) uniformly increases each rgb component. If you understand the rgb colour scale, this is equivalent to lightening vs darkening. So the above gradient is actually an ordering based on darkness level.</p>
-<p>This technique works surprisingly well, even considering how strange colours can transition. For example, below I generated 21 different colours from the <a href="/web/20150520142730/http://www.greyc.ensicaen.fr/~dtschump/CImg/img/reference/ref_colormap_jet.jpg">jet colourmap</a>. Here is the sample:</p>
+<p>This technique works surprisingly well, even considering how strange colours can transition. For example, below I generated 21 different colours from the <a href="http://www.greyc.ensicaen.fr/~dtschump/CImg/img/reference/ref_colormap_jet.jpg">jet colourmap</a>. Here is the sample:</p>
 <table cellpadding="0" cellspacing="0" style="margin: 30px auto;">
 <tbody>
 <tr>

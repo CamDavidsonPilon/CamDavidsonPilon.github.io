@@ -39,7 +39,7 @@ end
 scatter( 1:5:95, R) #shown below.
 </pre>
 <p><img alt="" src="//cdn.shopify.com/s/files/1/0678/1739/files/R2noVariables.png?984064467887908665"/></p>
-<p>Wow. I am saddened about this. What if after regression we just removed all variables with a small coefficient? <a href="/web/20150811175355/http://stats.stackexchange.com/questions/32936/sparsity-by-discarding-least-squares-coefficient">This Cross-Validated answer</a> explains why this is a dangerous idea. What is needed is a new approach.</p>
+<p>Wow. I am saddened about this. What if after regression we just removed all variables with a small coefficient? <a href="http://stats.stackexchange.com/questions/32936/sparsity-by-discarding-least-squares-coefficient">This Cross-Validated answer</a> explains why this is a dangerous idea. What is needed is a new approach.</p>
 <h3>Least Squares Regression with L1 Penalty</h3>
 <p>We make a slight modification to the optimization problem above and big things happen. Instead of using an L2 penalization function, we instead use an L1. 
 
@@ -73,7 +73,7 @@ where \(||w||_1 = ( |w_1| + |w_2| )\) and \(F\) is some quadratic function of \(
 <h3></h3>
 <h3>A worked example</h3>
 <h4>The dataset and results</h4>
-<p>Let's compare the coefficients of L1 versus unpenalized linear regression . I used the <a href="/web/20150811175355/http://people.sc.fsu.edu/~jburkardt/datasets/regression/x28.txt">Death Rate dataset</a>, which uses the following variables to predict regional <b>death rates </b> (emphasis added for effect):</p>
+<p>Let's compare the coefficients of L1 versus unpenalized linear regression . I used the <a href="http://people.sc.fsu.edu/~jburkardt/datasets/regression/x28.txt">Death Rate dataset</a>, which uses the following variables to predict regional <b>death rates </b> (emphasis added for effect):</p>
 <ul>
 <li>A1, the average annual precipitation;</li>
 <li>A2, the average January temperature;</li>
@@ -270,7 +270,7 @@ where \(||w||_1 = ( |w_1| + |w_2| )\) and \(F\) is some quadratic function of \(
 <ul>
 <li>Suppose you have a basket of financial assets, and you wish to hedge (or replicate) one of them against the others. Normally one might use least-squares to find a really good hedge. But if your basket is large, you will have to trade all of them, even the assets that are highly uncorrelated. This induces more risk and higher transaction costs in practice. Instead, one can use an L1 penalizer with least squares to find the <b>appropriate sub-basket</b> of assets that still gives a really good hedge, and reduces the number of assets to trade.</li>
 </ul>
-<p>L1 penalizations are a great way to both better explain your regression results and find important (i.e. abandon non-relevant) features. I have been having a lot of fun playing around with least squares with an L1 penalty. Extensions of this idea to <a href="/web/20150811175355/http://camdp.com/blogs/kernelized-and-supervised-principle-component-anal">PCA</a> means that we can find a <i>sparse</i> solution to that to, something I am very interested in.</p>
+<p>L1 penalizations are a great way to both better explain your regression results and find important (i.e. abandon non-relevant) features. I have been having a lot of fun playing around with least squares with an L1 penalty. Extensions of this idea to <a href="http://camdp.com/blogs/kernelized-and-supervised-principle-component-anal">PCA</a> means that we can find a <i>sparse</i> solution to that to, something I am very interested in.</p>
 <h3>References</h3>
 <ul>
 <li>Tibshirani, Robert. "Regression shrinkage and selection via the lasso." Journal of the Royal Statistical Society. Series B (Methodological) (1996): 267-288.</li>
