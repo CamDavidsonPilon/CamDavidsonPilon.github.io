@@ -7,7 +7,7 @@ redirect_from:
 ---
 
 <h2>Introduction</h2>
-<p>If you have been following this blog, you'll know that I employ Bayesian A/B testing for conversion tests (and <a href="https://dataorigami.myshopify.com/products/a-b-testing-conversion-rates" title="A/B testing conversion rates">see this screencast</a> to see how it works). One of the strongest reasons for this is the interpretability of the analogous "p-value", which I call <i>Confidence</i>, defined as the probability the conversion rate of <em>A </em>is greater than<em> B, </em></p>
+<p>If you have been following this blog, you'll know that I employ Bayesian A/B testing for conversion tests. One of the strongest reasons for this is the interpretability of the analogous "p-value", which I call <i>Confidence</i>, defined as the probability the conversion rate of <em>A </em>is greater than<em> B, </em></p>
 <p>$$\text{confidence} = P( C_A &gt; C_B ) $$</p>
 <p>Really, this is what the experimenter wants - an answer to: "what are the chances I am wrong?". So if I saw a confidence of 1.0 (or as I report it, 100%), I would have to conclude that I know <em>for certain</em> which group is superior.</p>
 <p>In practice, I've encountered a 100% confidence a few times, most often in two situations: when my sample size is very low, and when my sample size is very high. The latter situation makes sense: I have lots of data, enough so my testing algorithm can confidently conclude a winner. The former, when I have a small sample size, makes less sense - at first. Suppose the difference between the groups is small, then it doesn't make sense for my algorithm to be so certain in a winner. Instead what is happening is a break down between theory and practice.</p>
